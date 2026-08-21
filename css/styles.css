@@ -787,6 +787,36 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
   font-size: 0.82rem;
 }
 
+/* ---------- Presentes ---------- */
+
+.present-status {
+  flex-shrink: 0;
+  min-width: 74px;
+  border-radius: 99px;
+  border: 1.5px solid var(--ivory-deep);
+  background: var(--paper);
+  color: var(--ink-faint);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 7px 8px;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.present-status.st-comprado {
+  background: var(--sage-soft);
+  border-color: var(--sage);
+  color: #4c6640;
+}
+.present-status.st-ganho {
+  background: var(--rose-soft);
+  border-color: var(--rose);
+  color: #a05b50;
+}
+
+.list-item.pego .item-title { color: var(--ink-soft); }
+.list-item.pego { background: linear-gradient(0deg, rgba(226,232,218,0.35), rgba(226,232,218,0.35)), var(--paper); }
+
 /* ---------- Padrinhos ---------- */
 
 .pair-item {
@@ -874,14 +904,21 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
   flex-direction: column;
   align-items: center;
   gap: 3px;
-  font-size: 0.64rem;
+  font-size: 0.6rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  padding: 5px 10px;
+  letter-spacing: 0.02em;
+  padding: 5px 4px;
   border-radius: 12px;
   transition: color 0.2s;
   flex: 1;
-  max-width: 96px;
+  min-width: 0;
+  max-width: 90px;
+}
+.nav-item span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .nav-item.is-active { color: var(--ink); }
 .nav-item.is-active svg { color: var(--gold); }

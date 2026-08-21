@@ -19,11 +19,13 @@
     itens: [],        // { id, descricao, valor (centavos), resolvido }
     padrinhos: [],    // { id, padrinho, madrinha }
     fornecedores: [], // { id, nome, categoria, contato }
+    presentes: [],    // { id, nome, valor (centavos), link, status: "falta"|"comprado"|"ganho" }
   });
 
   let state = carregar();
   let filtroConvidados = "todos";
   let filtroChecklist = "todos";
+  let filtroPresentes = "todos";
 
   /* ---------- persistência ---------- */
 
@@ -73,6 +75,14 @@
     const div = document.createElement("div");
     div.textContent = texto;
     return div.innerHTML;
+  }
+
+  const escapeAttr = (texto) => escapeHtml(texto).replace(/"/g, "&quot;");
+
+  function normalizarLink(link) {
+    const l = String(link || "").trim();
+    if (!l) return "";
+    return /^https?:\/\//i.test(l) ? l : "https://" + l;
   }
 
   let toastTimer;
@@ -229,6 +239,12 @@
           )
           .join("")
       : `<li><span>Nenhuma pendência — aproveitem o momento 💛</span></li>`;
+
+    // presentes
+    const pres = state.presentes;
+    const presTemos = pres.filter((p) => p.status !== "falta").length;
+    $("#resumo-presentes-frac").textContent = `${presTemos}/${pres.length}`;
+    $("#presentes-progress").style.width = pres.length ? (presTemos / pres.length) * 100 + "%" : "0%";
 
     // lados
     $("#resumo-lado-a").textContent = ladoNoiva;
@@ -500,6 +516,96 @@
     state.fornecedores = state.fornecedores.filter((x) => x.id !== id);
     salvar();
     renderTudo();
+  });
+
+  /* ---------- presentes ---------- */
+
+  const ROTULO_STATUS = { falta: "Falta", comprado: "Comprado", ganho: "Ganho" };
+  const PROXIMO_STATUS = { falta: "comprado", comprado: "ganho", ganho: "falta" };
+
+  function renderPresentes() {
+    const lista = $("#lista-presentes");
+    const presentes = state.presentes;
+
+    const filtrados = presentes.filter((p) => {
+      if (filtroPresentes === "faltam") return p.status === "falta";
+      if (filtroPresentes === "comprado") return p.status === "comprado";
+      if (filtroPresentes === "ganho") return p.status === "ganho";
+      return true;
+    });
+
+    lista.innerHTML = filtrados
+      .map((p) => {
+        const pego = p.status !== "falta";
+        const link = p.link
+          ? `<a class="link-contato" href="${escapeAttr(p.link)}" target="_blank" rel="noopener">ver loja ↗</a>`
+          : "";
+        const valor = p.valor ? `<span>${brl(p.valor)}</span>` : "";
+        const meta = valor || link ? `<div class="item-meta">${valor}${link}</div>` : "";
+        return `<li class="list-item ${pego ? "pego" : ""}" data-id="${p.id}">
+          <button class="present-status st-${p.status}" data-acao="status" aria-label="Mudar situação" title="Toque para mudar">${ROTULO_STATUS[p.status]}</button>
+          <div class="item-main">
+            <div class="item-title">${escapeHtml(p.nome)}</div>
+            ${meta}
+          </div>
+          <button class="btn-remove" data-acao="remover" aria-label="Remover">${iconeLixeira}</button>
+        </li>`;
+      })
+      .join("");
+
+    $("#presentes-empty").classList.toggle("is-visible", presentes.length === 0);
+
+    const temos = presentes.filter((p) => p.status !== "falta").length;
+    $("#presentes-total").textContent = presentes.length;
+    $("#presentes-temos").textContent = temos;
+    $("#presentes-faltam").textContent = presentes.length - temos;
+    $("#presentes-resumo").textContent = presentes.length
+      ? `${temos} de ${presentes.length} já ${temos === 1 ? "conquistado" : "conquistados"}`
+      : "Nenhum presente ainda";
+  }
+
+  $("#form-presente").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const nome = $("#presente-nome").value.trim();
+    if (!nome) return;
+    state.presentes.push({
+      id: uid(),
+      nome,
+      valor: parseValor($("#presente-valor").value),
+      link: normalizarLink($("#presente-link").value),
+      status: "falta",
+    });
+    salvar();
+    renderTudo();
+    e.target.reset();
+    $("#presente-nome").focus();
+    toast("Presente adicionado 🎁");
+  });
+
+  $("#lista-presentes").addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-acao]");
+    if (!btn) return;
+    const id = btn.closest("[data-id]").dataset.id;
+    const p = state.presentes.find((x) => x.id === id);
+    if (!p) return;
+    if (btn.dataset.acao === "status") {
+      p.status = PROXIMO_STATUS[p.status] || "falta";
+      if (p.status === "comprado") toast("Marcado como comprado 🛒");
+      else if (p.status === "ganho") toast("Que presente! 🎁💛");
+    } else if (btn.dataset.acao === "remover") {
+      if (!confirm(`Remover "${p.nome}" da lista?`)) return;
+      state.presentes = state.presentes.filter((x) => x.id !== id);
+    }
+    salvar();
+    renderTudo();
+  });
+
+  $("#presentes-filtros").addEventListener("click", (e) => {
+    const chip = e.target.closest(".chip");
+    if (!chip) return;
+    filtroPresentes = chip.dataset.filtro;
+    $$("#presentes-filtros .chip").forEach((c) => c.classList.toggle("is-active", c === chip));
+    renderPresentes();
   });
 
   /* ---------- configurações ---------- */
@@ -810,6 +916,7 @@
     renderChecklist();
     renderPadrinhos();
     renderFornecedores();
+    renderPresentes();
     atualizarContagem();
   }
 
