@@ -542,6 +542,33 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
 
 .card-danger { border-color: rgba(176, 80, 60, 0.35); }
 
+/* ---------- Sincronização ---------- */
+
+.sync-status {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.sync-status.is-ok { color: var(--ok); }
+.sync-status.is-erro { color: var(--gold); }
+
+.card-text-meio { margin: 14px 0 8px; }
+
+.card .form-row input[type="text"] {
+  width: 100%;
+  border: 1.5px solid var(--ivory-deep);
+  background: var(--ivory);
+  border-radius: 12px;
+  padding: 11px 13px;
+  min-width: 0;
+}
+.card .form-row input[type="text"]:focus { outline: none; border-color: var(--gold-soft); }
+#sync-codigo { font-size: 0.8rem; color: var(--ink-soft); }
+
+.btn-estreito { flex: 0 0 auto; }
+.btn-desconectar { margin-top: 12px; }
+
 /* ---------- Chips / filtros ---------- */
 
 .filter-row {

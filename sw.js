@@ -1,7 +1,7 @@
 /* Service worker — Nosso Casamento
    Estratégia: cache-first para o app shell, com atualização em segundo plano. */
 
-const CACHE = "nosso-casamento-v1";
+const CACHE = "nosso-casamento-v2";
 
 const SHELL = [
   "./",
@@ -39,6 +39,9 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
 
   const url = new URL(request.url);
+
+  // a API de sincronização nunca passa pelo cache
+  if (url.pathname.endsWith("/api")) return;
 
   // fontes do Google: cache-first com preenchimento dinâmico
   if (url.hostname === "fonts.googleapis.com" || url.hostname === "fonts.gstatic.com") {

@@ -7,6 +7,11 @@
   "use strict";
 
   const STORAGE_KEY = "nosso-casamento-v1";
+  const CASAL_KEY = "nosso-casamento-casal";
+
+  // Quando o app é servido pela Edge Function do Supabase, a API de
+  // sincronização vive no mesmo caminho, em ./api
+  const API_URL = location.pathname.replace(/\/$/, "") + "/api";
 
   const estadoInicial = () => ({
     config: { noiva: "", noivo: "", data: "", local: "" },
@@ -39,6 +44,7 @@
     } catch {
       toast("Não foi possível salvar os dados 😢");
     }
+    agendarEnvio();
   }
 
   const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
@@ -565,6 +571,158 @@
     toast("Dados apagados");
   });
 
+  /* ---------- sincronização entre celulares (Supabase) ---------- */
+
+  let casal = "";
+  try { casal = localStorage.getItem(CASAL_KEY) || ""; } catch {}
+  let syncTimer;
+  let syncPendente = false;
+
+  async function api(corpo) {
+    const resp = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(corpo),
+    });
+    if (!resp.ok) {
+      const erro = new Error("HTTP " + resp.status);
+      erro.status = resp.status;
+      throw erro;
+    }
+    return resp.json();
+  }
+
+  function agendarEnvio() {
+    if (!casal) return;
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(enviarAgora, 1200);
+  }
+
+  async function enviarAgora() {
+    if (!casal) return;
+    clearTimeout(syncTimer);
+    try {
+      await api({ op: "salvar", casal, estado: state });
+      syncPendente = false;
+    } catch {
+      syncPendente = true;
+    }
+    renderSync();
+  }
+
+  function guardarCasal(codigo) {
+    casal = codigo;
+    try {
+      if (codigo) localStorage.setItem(CASAL_KEY, codigo);
+      else localStorage.removeItem(CASAL_KEY);
+    } catch {}
+    renderSync();
+  }
+
+  function renderSync() {
+    const ligado = Boolean(casal);
+    $("#sync-off").hidden = ligado;
+    $("#sync-on").hidden = !ligado;
+    const status = $("#sync-status");
+    if (!ligado) {
+      status.textContent = "";
+    } else if (syncPendente) {
+      status.textContent = "aguardando conexão";
+      status.className = "sync-status is-erro";
+    } else {
+      status.textContent = "sincronizado ✓";
+      status.className = "sync-status is-ok";
+    }
+    if (ligado) $("#sync-codigo").value = casal;
+  }
+
+  $("#btn-sync-ativar").addEventListener("click", async () => {
+    const btn = $("#btn-sync-ativar");
+    btn.disabled = true;
+    try {
+      const r = await api({ op: "criar", estado: state });
+      guardarCasal(r.casal);
+      toast("Sincronização ativada! Compartilhe o código com seu par 💛");
+    } catch {
+      toast("Não foi possível ativar agora. Tente de novo em instantes.");
+    }
+    btn.disabled = false;
+  });
+
+  $("#btn-sync-conectar").addEventListener("click", async () => {
+    const codigo = $("#sync-codigo-entrada").value.trim();
+    if (!codigo) {
+      toast("Cole o código do casal primeiro");
+      return;
+    }
+    try {
+      const r = await api({ op: "estado", casal: codigo });
+      const temDadosLocais = state.convidados.length || state.itens.length || state.padrinhos.length;
+      if (temDadosLocais && !confirm("Conectar substitui os dados deste aparelho pelos da nuvem. Continuar?")) return;
+      state = { ...estadoInicial(), ...r.estado, config: { ...estadoInicial().config, ...(r.estado.config || {}) } };
+      guardarCasal(codigo);
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
+      preencherConfig();
+      renderTudo();
+      $("#sync-codigo-entrada").value = "";
+      toast("Conectado! Os dados agora ficam em sincronia ✨");
+    } catch (e) {
+      toast(e.status === 404 ? "Código não encontrado. Confira e tente de novo." : "Não foi possível conectar agora.");
+    }
+  });
+
+  $("#btn-sync-copiar").addEventListener("click", async () => {
+    const campo = $("#sync-codigo");
+    campo.select();
+    try {
+      await navigator.clipboard.writeText(casal);
+      toast("Código copiado 📋");
+    } catch {
+      toast("Selecione o código e copie manualmente");
+    }
+  });
+
+  $("#btn-sync-sair").addEventListener("click", () => {
+    if (!confirm("Desconectar este aparelho? Os dados continuam aqui e na nuvem, mas param de sincronizar.")) return;
+    guardarCasal("");
+    toast("Aparelho desconectado");
+  });
+
+  async function baixarDaNuvem() {
+    if (!casal) return;
+    try {
+      const r = await api({ op: "estado", casal });
+      state = { ...estadoInicial(), ...r.estado, config: { ...estadoInicial().config, ...(r.estado.config || {}) } };
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
+      syncPendente = false;
+      preencherConfig();
+      renderTudo();
+    } catch (e) {
+      if (e.status === 404) {
+        // código apagado no servidor: mantém os dados locais e desconecta
+        guardarCasal("");
+        toast("O código do casal não existe mais; sincronização desativada.");
+      } else {
+        syncPendente = true;
+      }
+    }
+    renderSync();
+  }
+
+  window.addEventListener("online", enviarAgora);
+  document.addEventListener("visibilitychange", () => {
+    // envia imediatamente o que estiver pendente ao sair do app
+    if (document.visibilityState === "hidden" && casal && (syncTimer || syncPendente)) {
+      clearTimeout(syncTimer);
+      try {
+        navigator.sendBeacon(
+          API_URL,
+          new Blob([JSON.stringify({ op: "salvar", casal, estado: state })], { type: "application/json" })
+        );
+      } catch {}
+    }
+  });
+
   /* ---------- render geral ---------- */
 
   function renderTudo() {
@@ -579,6 +737,8 @@
 
   preencherConfig();
   renderTudo();
+  renderSync();
+  baixarDaNuvem();
 
   // primeira visita: leva direto para a configuração
   const primeiraVez = !state.config.data && state.convidados.length === 0 && state.itens.length === 0;

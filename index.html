@@ -250,6 +250,30 @@
       </form>
 
       <div class="card">
+        <div class="card-head">
+          <h2>Sincronizar entre celulares</h2>
+          <span class="sync-status" id="sync-status"></span>
+        </div>
+        <div id="sync-off">
+          <p class="card-text">Ative para guardar os dados na nuvem e os dois celulares verem as mesmas listas. Vocês compartilham um <b>código secreto do casal</b>.</p>
+          <button class="btn-primary btn-block" id="btn-sync-ativar" type="button">Ativar sincronização</button>
+          <p class="card-text card-text-meio">Seu par já ativou? Cole o código aqui:</p>
+          <div class="form-row">
+            <input type="text" id="sync-codigo-entrada" placeholder="código do casal" autocomplete="off">
+            <button class="btn-secondary btn-estreito" id="btn-sync-conectar" type="button">Conectar</button>
+          </div>
+        </div>
+        <div id="sync-on" hidden>
+          <p class="card-text">Compartilhe este código com seu par (pelo WhatsApp, por exemplo). No outro celular: <b>Configurações → colar o código → Conectar</b>. Guarde-o com carinho: quem tem o código acessa os dados.</p>
+          <div class="form-row">
+            <input type="text" id="sync-codigo" readonly>
+            <button class="btn-secondary btn-estreito" id="btn-sync-copiar" type="button">Copiar</button>
+          </div>
+          <button class="btn-danger btn-desconectar" id="btn-sync-sair" type="button">Desconectar este aparelho</button>
+        </div>
+      </div>
+
+      <div class="card">
         <div class="card-head"><h2>Backup dos dados</h2></div>
         <p class="card-text">Os dados ficam salvos apenas neste aparelho. Exporte um arquivo de backup para guardar ou levar para outro celular.</p>
         <div class="form-row">
