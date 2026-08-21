@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="Planejador de casamento: convidados, checklist, padrinhos, fornecedores e contagem regressiva.">
+  <meta name="theme-color" content="#2f3a2a">
+  <title>Nosso Casamento</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Casamento">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Karla:ital,wght@0,300..700;1,300..700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="monogram" id="monogram">N&amp;N</div>
+      <div class="header-names">
+        <h1 id="header-couple">Nosso Casamento</h1>
+        <p id="header-date">Configure a data do grande dia</p>
+      </div>
+      <button class="btn-icon" id="btn-config" aria-label="Configurações" title="Configurações">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.09a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="app-main">
+
+    <!-- ============ DASHBOARD ============ -->
+    <section class="view is-active" id="view-dashboard">
+      <div class="countdown-card">
+        <p class="countdown-label">Faltam</p>
+        <div class="countdown-grid" id="countdown">
+          <div class="cd-unit"><span class="cd-num" id="cd-dias">--</span><span class="cd-lbl">dias</span></div>
+          <div class="cd-unit"><span class="cd-num" id="cd-horas">--</span><span class="cd-lbl">horas</span></div>
+          <div class="cd-unit"><span class="cd-num" id="cd-min">--</span><span class="cd-lbl">min</span></div>
+          <div class="cd-unit"><span class="cd-num" id="cd-seg">--</span><span class="cd-lbl">seg</span></div>
+        </div>
+        <p class="countdown-date" id="countdown-date">para o grande dia</p>
+      </div>
+
+      <div class="stat-grid">
+        <button class="stat-card" data-goto="convidados">
+          <span class="stat-num" id="stat-convidados">0</span>
+          <span class="stat-lbl">Convidados</span>
+          <span class="stat-sub" id="stat-convidados-sub">—</span>
+        </button>
+        <button class="stat-card" data-goto="checklist">
+          <span class="stat-num" id="stat-pendencias">0</span>
+          <span class="stat-lbl">Pendências</span>
+          <span class="stat-sub" id="stat-pendencias-sub">—</span>
+        </button>
+        <button class="stat-card" data-goto="padrinhos">
+          <span class="stat-num" id="stat-padrinhos">0</span>
+          <span class="stat-lbl">Padrinhos</span>
+          <span class="stat-sub" id="stat-padrinhos-sub">—</span>
+        </button>
+        <button class="stat-card" data-goto="fornecedores">
+          <span class="stat-num" id="stat-fornecedores">0</span>
+          <span class="stat-lbl">Fornecedores</span>
+          <span class="stat-sub" id="stat-fornecedores-sub">—</span>
+        </button>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>Orçamento</h2>
+          <span class="card-head-value" id="resumo-orcamento-total">R$ 0,00</span>
+        </div>
+        <div class="progress-track"><div class="progress-fill" id="orcamento-progress"></div></div>
+        <div class="legend">
+          <span class="legend-item"><i class="dot dot-ok"></i>Resolvido: <b id="resumo-valor-resolvido">R$ 0,00</b></span>
+          <span class="legend-item"><i class="dot dot-pend"></i>Pendente: <b id="resumo-valor-pendente">R$ 0,00</b></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>Checklist</h2>
+          <span class="card-head-value" id="resumo-checklist-frac">0/0</span>
+        </div>
+        <div class="progress-track"><div class="progress-fill" id="checklist-progress"></div></div>
+        <ul class="mini-list" id="dash-pendentes"></ul>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>Convidados por lado</h2></div>
+        <div class="split-bar" id="split-bar">
+          <div class="split-noiva" id="split-noiva"></div>
+          <div class="split-noivo" id="split-noivo"></div>
+        </div>
+        <div class="legend">
+          <span class="legend-item"><i class="dot dot-noiva"></i><span id="lado-a-label">Noiva</span>: <b id="resumo-lado-a">0</b></span>
+          <span class="legend-item"><i class="dot dot-noivo"></i><span id="lado-b-label">Noivo</span>: <b id="resumo-lado-b">0</b></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CONVIDADOS ============ -->
+    <section class="view" id="view-convidados">
+      <div class="view-head">
+        <h2 class="view-title">Lista de Convidados</h2>
+        <p class="view-sub" id="convidados-resumo">Nenhum convidado ainda</p>
+      </div>
+
+      <form class="form-card" id="form-convidado">
+        <input type="text" id="convidado-nome" placeholder="Nome do convidado" required maxlength="80">
+        <div class="form-row">
+          <div class="seg-control" role="radiogroup" aria-label="Lado">
+            <label><input type="radio" name="convidado-lado" value="noiva" checked><span id="seg-lado-a">Noiva</span></label>
+            <label><input type="radio" name="convidado-lado" value="noivo"><span id="seg-lado-b">Noivo</span></label>
+          </div>
+          <label class="field-inline">
+            <span>+ acomp.</span>
+            <input type="number" id="convidado-acomp" min="0" max="20" value="0">
+          </label>
+          <button type="submit" class="btn-primary">Adicionar</button>
+        </div>
+      </form>
+
+      <div class="filter-row" id="convidados-filtros">
+        <button class="chip is-active" data-filtro="todos">Todos</button>
+        <button class="chip" data-filtro="noiva" id="chip-lado-a">Noiva</button>
+        <button class="chip" data-filtro="noivo" id="chip-lado-b">Noivo</button>
+        <button class="chip" data-filtro="confirmados">Confirmados</button>
+      </div>
+
+      <ul class="item-list" id="lista-convidados"></ul>
+      <p class="empty-state" id="convidados-empty">Adicione o primeiro convidado acima ✨</p>
+    </section>
+
+    <!-- ============ CHECKLIST ============ -->
+    <section class="view" id="view-checklist">
+      <div class="view-head">
+        <h2 class="view-title">Checklist &amp; Custos</h2>
+        <p class="view-sub" id="checklist-resumo">Nenhum item ainda</p>
+      </div>
+
+      <form class="form-card" id="form-item">
+        <input type="text" id="item-desc" placeholder="O que precisa ser resolvido?" required maxlength="120">
+        <div class="form-row">
+          <label class="field-inline field-money">
+            <span>R$</span>
+            <input type="text" id="item-valor" inputmode="decimal" placeholder="0,00">
+          </label>
+          <button type="submit" class="btn-primary">Adicionar</button>
+        </div>
+      </form>
+
+      <div class="totals-strip">
+        <div class="total-box"><span class="total-lbl">Total</span><span class="total-val" id="total-geral">R$ 0,00</span></div>
+        <div class="total-box total-ok"><span class="total-lbl">Resolvido</span><span class="total-val" id="total-resolvido">R$ 0,00</span></div>
+        <div class="total-box total-pend"><span class="total-lbl">Pendente</span><span class="total-val" id="total-pendente">R$ 0,00</span></div>
+      </div>
+
+      <div class="filter-row" id="checklist-filtros">
+        <button class="chip is-active" data-filtro="todos">Todos</button>
+        <button class="chip" data-filtro="pendentes">Pendentes</button>
+        <button class="chip" data-filtro="resolvidos">Resolvidos</button>
+      </div>
+
+      <ul class="item-list" id="lista-itens"></ul>
+      <p class="empty-state" id="checklist-empty">Cadastre a primeira tarefa acima ✨</p>
+    </section>
+
+    <!-- ============ PADRINHOS ============ -->
+    <section class="view" id="view-padrinhos">
+      <div class="view-head">
+        <h2 class="view-title">Padrinhos &amp; Madrinhas</h2>
+        <p class="view-sub" id="padrinhos-resumo">Nenhum par ainda</p>
+      </div>
+
+      <form class="form-card" id="form-padrinho">
+        <div class="form-row form-row-stack">
+          <input type="text" id="padrinho-nome" placeholder="Padrinho" required maxlength="80">
+          <span class="amp">&amp;</span>
+          <input type="text" id="madrinha-nome" placeholder="Madrinha" required maxlength="80">
+        </div>
+        <button type="submit" class="btn-primary btn-block">Adicionar par</button>
+      </form>
+
+      <ul class="pair-list" id="lista-padrinhos"></ul>
+      <p class="empty-state" id="padrinhos-empty">Adicione o primeiro par acima ✨</p>
+    </section>
+
+    <!-- ============ FORNECEDORES ============ -->
+    <section class="view" id="view-fornecedores">
+      <div class="view-head">
+        <h2 class="view-title">Fornecedores</h2>
+        <p class="view-sub" id="fornecedores-resumo">Nenhum fornecedor ainda</p>
+      </div>
+
+      <form class="form-card" id="form-fornecedor">
+        <input type="text" id="fornecedor-nome" placeholder="Nome (ex.: Buffet Sabor & Festa)" required maxlength="80">
+        <div class="form-row">
+          <select id="fornecedor-categoria">
+            <option>Buffet</option>
+            <option>Fotografia</option>
+            <option>Música / DJ</option>
+            <option>Decoração</option>
+            <option>Espaço / Local</option>
+            <option>Vestido & Traje</option>
+            <option>Doces & Bolo</option>
+            <option>Convites</option>
+            <option>Cerimonial</option>
+            <option>Outro</option>
+          </select>
+          <input type="tel" id="fornecedor-contato" placeholder="WhatsApp / telefone" maxlength="20">
+        </div>
+        <button type="submit" class="btn-primary btn-block">Adicionar fornecedor</button>
+      </form>
+
+      <ul class="item-list" id="lista-fornecedores"></ul>
+      <p class="empty-state" id="fornecedores-empty">Cadastre o primeiro fornecedor acima ✨</p>
+    </section>
+
+    <!-- ============ CONFIGURAÇÕES ============ -->
+    <section class="view" id="view-config">
+      <div class="view-head">
+        <h2 class="view-title">Nosso Casamento</h2>
+        <p class="view-sub">Dados do casal e do grande dia</p>
+      </div>
+
+      <form class="form-card" id="form-config">
+        <label class="field">
+          <span>Nome da noiva</span>
+          <input type="text" id="config-noiva" placeholder="Ex.: Maria" maxlength="40">
+        </label>
+        <label class="field">
+          <span>Nome do noivo / noiva</span>
+          <input type="text" id="config-noivo" placeholder="Ex.: João" maxlength="40">
+        </label>
+        <label class="field">
+          <span>Data e hora do casamento</span>
+          <input type="datetime-local" id="config-data">
+        </label>
+        <label class="field">
+          <span>Local (opcional)</span>
+          <input type="text" id="config-local" placeholder="Ex.: Estância Bahia" maxlength="80">
+        </label>
+        <button type="submit" class="btn-primary btn-block">Salvar</button>
+      </form>
+
+      <div class="card">
+        <div class="card-head"><h2>Backup dos dados</h2></div>
+        <p class="card-text">Os dados ficam salvos apenas neste aparelho. Exporte um arquivo de backup para guardar ou levar para outro celular.</p>
+        <div class="form-row">
+          <button class="btn-secondary" id="btn-exportar" type="button">Exportar backup</button>
+          <button class="btn-secondary" id="btn-importar" type="button">Importar backup</button>
+          <input type="file" id="input-importar" accept="application/json" hidden>
+        </div>
+      </div>
+
+      <div class="card card-danger">
+        <div class="card-head"><h2>Zona de perigo</h2></div>
+        <p class="card-text">Apaga todos os convidados, tarefas, padrinhos e fornecedores deste aparelho.</p>
+        <button class="btn-danger" id="btn-limpar" type="button">Apagar todos os dados</button>
+      </div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav" aria-label="Navegação principal">
+    <button class="nav-item is-active" data-view="dashboard" aria-label="Início">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
+      <span>Início</span>
+    </button>
+    <button class="nav-item" data-view="convidados" aria-label="Convidados">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M2.8 20c.6-3.4 3.1-5.2 6.2-5.2s5.6 1.8 6.2 5.2"/><circle cx="17" cy="9" r="2.5"/><path d="M15.6 14.4c2.9.1 5 1.7 5.6 4.6"/></svg>
+      <span>Convidados</span>
+    </button>
+    <button class="nav-item" data-view="checklist" aria-label="Checklist">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3.5" width="16" height="17" rx="2.5"/><path d="m8.5 12 2.4 2.4 4.6-4.8"/></svg>
+      <span>Checklist</span>
+    </button>
+    <button class="nav-item" data-view="padrinhos" aria-label="Padrinhos">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="13.5" r="5"/><circle cx="15" cy="13.5" r="5"/><path d="m10.8 6.5 1.2-2 1.2 2"/></svg>
+      <span>Padrinhos</span>
+    </button>
+    <button class="nav-item" data-view="fornecedores" aria-label="Fornecedores">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h16l-1.2 12.2a1.8 1.8 0 0 1-1.8 1.6H7a1.8 1.8 0 0 1-1.8-1.6z"/><path d="M8.5 11V6.5a3.5 3.5 0 0 1 7 0V11"/></svg>
+      <span>Fornec.</span>
+    </button>
+  </nav>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
