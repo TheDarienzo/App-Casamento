@@ -130,6 +130,12 @@
           <span class="card-head-value" id="resumo-checklist-frac">0/0</span>
         </div>
         <div class="progress-track"><div class="progress-fill" id="checklist-progress"></div></div>
+        <div class="dash-mini">
+          <div class="dash-mini-item"><span class="dm-num dm-ok" id="cl-feitos">0</span><span class="dm-lbl">Resolvidos</span></div>
+          <div class="dash-mini-item"><span class="dm-num dm-pend" id="cl-faltam">0</span><span class="dm-lbl">Pendentes</span></div>
+          <div class="dash-mini-item"><span class="dm-num dm-money" id="cl-valor-pendente">R$ 0</span><span class="dm-lbl">A pagar</span></div>
+        </div>
+        <p class="dash-list-titulo" id="dash-pendentes-titulo">Próximas pendências</p>
         <ul class="mini-list" id="dash-pendentes"></ul>
       </div>
 
@@ -139,6 +145,17 @@
           <span class="card-head-value" id="resumo-presentes-frac">0/0</span>
         </div>
         <div class="progress-track"><div class="progress-fill" id="presentes-progress"></div></div>
+        <div class="dash-mini">
+          <div class="dash-mini-item"><span class="dm-num dm-ganho" id="pr-ganhos">0</span><span class="dm-lbl">🎁 Ganhos</span></div>
+          <div class="dash-mini-item"><span class="dm-num dm-comprado" id="pr-comprados">0</span><span class="dm-lbl">🛒 Comprados</span></div>
+          <div class="dash-mini-item"><span class="dm-num dm-pend" id="pr-faltam">0</span><span class="dm-lbl">Faltam</span></div>
+        </div>
+        <p class="dash-list-titulo" id="dash-presentes-titulo">Ainda faltam</p>
+        <ul class="mini-list" id="dash-presentes-faltam"></ul>
+        <div class="legend" id="presentes-valor-legenda" hidden>
+          <span class="legend-item"><i class="dot dot-ok"></i>Já conquistado: <b id="pr-valor-conquistado">R$ 0,00</b></span>
+          <span class="legend-item"><i class="dot dot-pend"></i>Total da lista: <b id="pr-valor-total">R$ 0,00</b></span>
+        </div>
       </div>
 
       <div class="card">

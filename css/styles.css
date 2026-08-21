@@ -366,6 +366,52 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
 .split-noiva { background: var(--rose); transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
 .split-noivo { background: var(--sage); transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
 
+.dash-mini {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 2px 0 12px;
+}
+.dash-mini-item {
+  background: var(--ivory);
+  border: 1px solid rgba(179, 137, 46, 0.14);
+  border-radius: 12px;
+  padding: 9px 6px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dm-num {
+  font-family: var(--font-display);
+  font-weight: 550;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.dm-num.dm-money { font-size: 0.95rem; }
+.dm-ok { color: var(--ok); }
+.dm-pend { color: var(--gold); }
+.dm-ganho { color: var(--rose); }
+.dm-comprado { color: var(--sage); }
+.dm-lbl {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-faint);
+  font-weight: 700;
+}
+
+.dash-list-titulo {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--ink-faint);
+  margin-bottom: 2px;
+}
+
 .mini-list { list-style: none; }
 .mini-list li {
   display: flex;

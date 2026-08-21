@@ -236,28 +236,65 @@
     const feitos = state.itens.length - pendentes.length;
     $("#resumo-checklist-frac").textContent = `${feitos}/${state.itens.length}`;
     $("#checklist-progress").style.width = state.itens.length ? (feitos / state.itens.length) * 100 + "%" : "0%";
+    $("#cl-feitos").textContent = feitos;
+    $("#cl-faltam").textContent = pendentes.length;
+    $("#cl-valor-pendente").textContent = brl(valorPendente);
 
     const proximos = pendentes.slice(0, 4);
-    $("#dash-pendentes").innerHTML = proximos.length
-      ? proximos
-          .map(
-            (i) =>
-              `<li><span>${escapeHtml(i.descricao)}</span>` +
-              (i.valor ? `<span class="mini-valor">${brl(i.valor)}</span>` : "") +
-              `</li>`
-          )
-          .join("")
-      : `<li><span>Nenhuma pendência — aproveitem o momento 💛</span></li>`;
+    $("#dash-pendentes-titulo").hidden = state.itens.length === 0;
+    $("#dash-pendentes").innerHTML = state.itens.length === 0
+      ? `<li><span>Cadastre as tarefas do casamento na aba Checklist ✨</span></li>`
+      : proximos.length
+        ? proximos
+            .map(
+              (i) =>
+                `<li><span>${escapeHtml(i.descricao)}</span>` +
+                (i.valor ? `<span class="mini-valor">${brl(i.valor)}</span>` : "") +
+                `</li>`
+            )
+            .join("")
+        : `<li><span>Tudo resolvido — aproveitem o momento 💛</span></li>`;
 
     // presentes
     const pres = state.presentes;
-    const presTemos = pres.filter((p) => p.status !== "falta").length;
+    const presGanhos = pres.filter((p) => p.status === "ganho").length;
+    const presComprados = pres.filter((p) => p.status === "comprado").length;
+    const presFaltam = pres.filter((p) => p.status === "falta").length;
+    const presTemos = presGanhos + presComprados;
     $("#resumo-presentes-frac").textContent = `${presTemos}/${pres.length}`;
     $("#presentes-progress").style.width = pres.length ? (presTemos / pres.length) * 100 + "%" : "0%";
     $("#stat-presentes").textContent = pres.length;
     $("#stat-presentes-sub").textContent = pres.length
       ? `${presTemos} já ${presTemos === 1 ? "conquistado" : "conquistados"}`
       : "nenhum ainda";
+    $("#pr-ganhos").textContent = presGanhos;
+    $("#pr-comprados").textContent = presComprados;
+    $("#pr-faltam").textContent = presFaltam;
+
+    const faltamItens = pres.filter((p) => p.status === "falta").slice(0, 4);
+    $("#dash-presentes-titulo").hidden = pres.length === 0 || presFaltam === 0;
+    $("#dash-presentes-faltam").innerHTML = pres.length === 0
+      ? `<li><span>Montem a lista do que gostariam de ganhar 🎁</span></li>`
+      : presFaltam === 0
+        ? `<li><span>Vocês já conquistaram tudo da lista! 🎉</span></li>`
+        : faltamItens
+            .map(
+              (p) =>
+                `<li><span>${escapeHtml(p.nome)}</span>` +
+                (p.valor ? `<span class="mini-valor">${brl(p.valor)}</span>` : "") +
+                `</li>`
+            )
+            .join("");
+
+    const presValorTotal = pres.reduce((s, p) => s + (p.valor || 0), 0);
+    const presValorConquistado = pres.filter((p) => p.status !== "falta").reduce((s, p) => s + (p.valor || 0), 0);
+    if (presValorTotal > 0) {
+      $("#presentes-valor-legenda").hidden = false;
+      $("#pr-valor-conquistado").textContent = brl(presValorConquistado);
+      $("#pr-valor-total").textContent = brl(presValorTotal);
+    } else {
+      $("#presentes-valor-legenda").hidden = true;
+    }
 
     // lados
     $("#resumo-lado-a").textContent = ladoNoiva;
