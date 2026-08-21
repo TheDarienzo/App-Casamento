@@ -686,7 +686,9 @@
   let casal = "";
   try { casal = localStorage.getItem(CASAL_KEY) || ""; } catch {}
   let syncTimer;
-  let syncPendente = false;
+  let syncPendente = false;   // um envio falhou; há mudanças locais não salvas
+  let envioPendente = false;  // há um envio agendado (debounce) esperando
+  let ultimoAtualizadoEm = null; // carimbo da última versão vista da nuvem
 
   async function api(corpo) {
     // text/plain evita preflight de CORS; o servidor interpreta como JSON
@@ -705,6 +707,7 @@
 
   function agendarEnvio() {
     if (!casal) return;
+    envioPendente = true;
     clearTimeout(syncTimer);
     syncTimer = setTimeout(enviarAgora, 1200);
   }
@@ -712,14 +715,43 @@
   async function enviarAgora() {
     if (!casal) return;
     clearTimeout(syncTimer);
+    envioPendente = false;
     try {
-      await api({ op: "salvar", casal, estado: state });
+      const r = await api({ op: "salvar", casal, estado: state });
+      // guarda o carimbo da nossa própria escrita para o polling não
+      // reaplicar os mesmos dados como se fossem novidade
+      if (r && r.atualizado_em) ultimoAtualizadoEm = r.atualizado_em;
       syncPendente = false;
     } catch {
       syncPendente = true;
     }
     renderSync();
   }
+
+  // Verifica a nuvem periodicamente e aplica se o OUTRO celular mudou algo.
+  // Não sobrescreve enquanto há edição local pendente nem enquanto o
+  // usuário está digitando num campo.
+  async function puxarSeMudou() {
+    if (!casal || envioPendente || syncPendente) return;
+    if (document.visibilityState !== "visible") return;
+    const ativo = document.activeElement;
+    if (ativo && /^(INPUT|TEXTAREA|SELECT)$/.test(ativo.tagName)) return;
+    try {
+      const r = await api({ op: "estado", casal });
+      if (!r || !r.atualizado_em || r.atualizado_em === ultimoAtualizadoEm) return;
+      // reconfirma que nada começou a ser editado durante a busca
+      if (envioPendente || syncPendente) return;
+      ultimoAtualizadoEm = r.atualizado_em;
+      const nuvem = r.estado || {};
+      state = { ...estadoInicial(), ...nuvem, config: { ...estadoInicial().config, ...(nuvem.config || {}) } };
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
+      preencherConfig();
+      renderTudo();
+      toast("Atualizado ✨");
+    } catch {}
+  }
+
+  setInterval(puxarSeMudou, 7000);
 
   function guardarCasal(codigo) {
     casal = codigo;
@@ -776,6 +808,7 @@
     guardarCasal(codigo);
     try {
       const r = await api({ op: "estado", casal: codigo });
+      ultimoAtualizadoEm = r.atualizado_em || ultimoAtualizadoEm;
       const nuvem = r.estado || {};
       const nuvemTemDados =
         (nuvem.convidados || []).length ||
@@ -880,6 +913,7 @@
     if (!casal) return;
     try {
       const r = await api({ op: "estado", casal });
+      ultimoAtualizadoEm = r.atualizado_em || ultimoAtualizadoEm;
       state = { ...estadoInicial(), ...r.estado, config: { ...estadoInicial().config, ...(r.estado.config || {}) } };
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
       syncPendente = false;
@@ -899,15 +933,21 @@
 
   window.addEventListener("online", enviarAgora);
   document.addEventListener("visibilitychange", () => {
-    // envia imediatamente o que estiver pendente ao sair do app
-    if (document.visibilityState === "hidden" && casal && (syncTimer || syncPendente)) {
-      clearTimeout(syncTimer);
-      try {
-        navigator.sendBeacon(
-          API_URL,
-          new Blob([JSON.stringify({ op: "salvar", casal, estado: state })], { type: "text/plain;charset=UTF-8" })
-        );
-      } catch {}
+    if (!casal) return;
+    if (document.visibilityState === "hidden") {
+      // envia imediatamente o que estiver pendente ao sair do app
+      if (envioPendente || syncPendente) {
+        clearTimeout(syncTimer);
+        try {
+          navigator.sendBeacon(
+            API_URL,
+            new Blob([JSON.stringify({ op: "salvar", casal, estado: state })], { type: "text/plain;charset=UTF-8" })
+          );
+        } catch {}
+      }
+    } else {
+      // ao voltar para o app, busca na hora o que mudou
+      puxarSeMudou();
     }
   });
 

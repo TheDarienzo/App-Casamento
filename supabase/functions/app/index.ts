@@ -123,11 +123,11 @@ Deno.serve(async (req: Request) => {
       .from("casamentos")
       .update({ estado, atualizado_em: new Date().toISOString() })
       .eq("id", casal)
-      .select("id")
+      .select("id, atualizado_em")
       .maybeSingle();
     if (error) return json({ erro: "falha ao salvar" }, 500);
     if (!data) return json({ erro: "código não encontrado" }, 404);
-    return json({ ok: true });
+    return json({ ok: true, atualizado_em: data.atualizado_em });
   }
 
   return json({ erro: "operação desconhecida" }, 400);
