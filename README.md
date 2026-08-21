@@ -13,7 +13,11 @@ Aplicativo web instalável (PWA) para o casal organizar os preparativos do casam
 
 ## Como usar
 
-É um site estático — não precisa de servidor nem banco de dados.
+A página é estática (hospede em qualquer serviço de estáticos — veja o passo
+a passo em `PUBLICAR.md`). A sincronização entre celulares usa uma Edge
+Function no Supabase (projeto `App-Casamento`, função `app` + tabela
+`casamentos`); sem ela o app continua funcionando, só que com os dados
+apenas no aparelho.
 
 ### Publicar no GitHub Pages (recomendado)
 

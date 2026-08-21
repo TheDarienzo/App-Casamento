@@ -1,8 +1,10 @@
-// Edge Function "app" — serve o PWA Nosso Casamento e a API de sincronização.
+// Edge Function "app" — API de sincronização do PWA Nosso Casamento.
 //
-// Rotas:
-//   GET  /functions/v1/app/...   → arquivos estáticos do app (embutidos em assets.ts)
-//   POST /functions/v1/app/api   → { op: "criar" | "estado" | "salvar", ... }
+// O Supabase não serve páginas HTML (GET text/html vira text/plain, por
+// política da plataforma), então o app é hospedado fora (Cloudflare Pages,
+// GitHub Pages, …) e conversa com esta API:
+//
+//   POST .../functions/v1/app/api  → { op: "criar" | "estado" | "salvar", ... }
 //
 // Autenticação: o acesso aos dados exige o código do casal (uuid aleatório,
 // impossível de adivinhar), que funciona como chave secreta compartilhada.
@@ -10,8 +12,6 @@
 // (service role) consegue acessá-la.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { ASSETS } from "./assets.ts";
-import { gerarIcone } from "./icons.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -21,19 +21,34 @@ const supabase = createClient(
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ESTADO_MAX_BYTES = 512_000;
 
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "content-type",
+};
+
 function json(dados: unknown, status = 200): Response {
   return new Response(JSON.stringify(dados), {
     status,
-    headers: { "Content-Type": "application/json; charset=utf-8" },
+    headers: { ...CORS, "Content-Type": "application/json; charset=utf-8" },
   });
 }
 
-async function tratarApi(req: Request): Promise<Response> {
-  if (req.method !== "POST") return json({ erro: "use POST" }, 405);
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
+
+  if (req.method !== "POST") {
+    return json({
+      app: "Nosso Casamento",
+      status: "ok",
+      aviso: "Esta é a API de sincronização; o aplicativo fica no endereço publicado no Cloudflare/GitHub Pages.",
+    });
+  }
 
   let corpo: Record<string, unknown>;
   try {
-    corpo = await req.json();
+    // o cliente envia como text/plain para evitar preflight; ainda é JSON
+    corpo = JSON.parse(await req.text());
   } catch {
     return json({ erro: "JSON inválido" }, 400);
   }
@@ -81,42 +96,4 @@ async function tratarApi(req: Request): Promise<Response> {
   }
 
   return json({ erro: "operação desconhecida" }, 400);
-}
-
-Deno.serve(async (req: Request) => {
-  const url = new URL(req.url);
-
-  // caminho relativo à função, servida em /functions/v1/app
-  let path = url.pathname.replace(/^\/functions\/v1\/app/, "");
-  if (path === url.pathname) path = path.replace(/^\/app/, "");
-
-  if (path === "/api") return tratarApi(req);
-
-  if (req.method !== "GET") return new Response("Método não suportado", { status: 405 });
-
-  // sem a barra final os caminhos relativos do HTML quebrariam
-  if (path === "") {
-    return new Response(null, { status: 301, headers: { Location: url.pathname + "/" } });
-  }
-  if (path === "/") path = "/index.html";
-
-  // ícones PNG são gerados em memória (e ficam em cache na instância)
-  if (path.startsWith("/icons/") && path.endsWith(".png")) {
-    const icone = await gerarIcone(path.slice("/icons/".length));
-    if (!icone) return new Response("Não encontrado", { status: 404 });
-    return new Response(icone as BodyInit, {
-      headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=86400" },
-    });
-  }
-
-  const asset = ASSETS[path];
-  if (!asset) return new Response("Não encontrado", { status: 404 });
-
-  const semCache = path === "/index.html" || path === "/sw.js";
-  return new Response(asset.body, {
-    headers: {
-      "Content-Type": asset.type,
-      "Cache-Control": semCache ? "no-cache" : "public, max-age=3600",
-    },
-  });
 });

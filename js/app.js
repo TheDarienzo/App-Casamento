@@ -9,9 +9,9 @@
   const STORAGE_KEY = "nosso-casamento-v1";
   const CASAL_KEY = "nosso-casamento-casal";
 
-  // Quando o app é servido pela Edge Function do Supabase, a API de
-  // sincronização vive no mesmo caminho, em ./api
-  const API_URL = location.pathname.replace(/\/$/, "") + "/api";
+  // API de sincronização (Edge Function no Supabase). O app pode estar
+  // hospedado em qualquer lugar (Cloudflare Pages, GitHub Pages, …).
+  const API_URL = "https://rgxkmntpdbvvqcwksrwl.supabase.co/functions/v1/app/api";
 
   const estadoInicial = () => ({
     config: { noiva: "", noivo: "", data: "", local: "" },
@@ -579,9 +579,10 @@
   let syncPendente = false;
 
   async function api(corpo) {
+    // text/plain evita preflight de CORS; o servidor interpreta como JSON
     const resp = await fetch(API_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "text/plain;charset=UTF-8" },
       body: JSON.stringify(corpo),
     });
     if (!resp.ok) {
@@ -717,7 +718,7 @@
       try {
         navigator.sendBeacon(
           API_URL,
-          new Blob([JSON.stringify({ op: "salvar", casal, estado: state })], { type: "application/json" })
+          new Blob([JSON.stringify({ op: "salvar", casal, estado: state })], { type: "text/plain;charset=UTF-8" })
         );
       } catch {}
     }
