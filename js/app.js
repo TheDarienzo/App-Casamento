@@ -296,6 +296,13 @@
       $("#presentes-valor-legenda").hidden = true;
     }
 
+    // convidados: totais e confirmações
+    $("#resumo-convidados-total").textContent = `${totalConvidados} pessoa${totalConvidados === 1 ? "" : "s"}`;
+    $("#cv-pessoas").textContent = totalConvidados;
+    $("#cv-confirmados").textContent = confirmados;
+    $("#cv-aconfirmar").textContent = totalConvidados - confirmados;
+    $("#convidados-progress").style.width = totalConvidados ? (confirmados / totalConvidados) * 100 + "%" : "0%";
+
     // lados
     $("#resumo-lado-a").textContent = ladoNoiva;
     $("#resumo-lado-b").textContent = ladoNoivo;
