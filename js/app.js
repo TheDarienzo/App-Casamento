@@ -622,6 +622,7 @@
 
   function renderSync() {
     $("#conta-usuario").textContent = usuarioLogado || "—";
+    $("#conta-codigo").value = casal || "";
     const status = $("#sync-status");
     if (!casal) {
       status.textContent = "";
@@ -643,6 +644,21 @@
   function renderLogin() {
     $("#login-screen").hidden = Boolean(usuarioLogado);
   }
+
+  // alterna entre as abas "Entrar" e "Criar conta"
+  $$(".login-tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      const aba = tab.dataset.aba;
+      $$(".login-tab").forEach((t) => t.classList.toggle("is-active", t === tab));
+      const entrar = aba === "entrar";
+      $("#form-login").classList.toggle("is-active", entrar);
+      $("#form-login").hidden = !entrar;
+      $("#form-criar").classList.toggle("is-active", !entrar);
+      $("#form-criar").hidden = entrar;
+      $("#login-erro").textContent = "";
+      $("#criar-erro").textContent = "";
+    });
+  });
 
   // Após o login, decide a direção da sincronização: se a nuvem já tem
   // dados, ela manda; se está vazia, sobe o que já existe neste aparelho.
@@ -694,6 +710,51 @@
           : "Não foi possível entrar. Verifique a internet e tente de novo.";
     }
     btn.disabled = false;
+  });
+
+  $("#form-criar").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const usuario = $("#criar-usuario").value.trim();
+    const senha = $("#criar-senha").value;
+    const senha2 = $("#criar-senha2").value;
+    const codigo = $("#criar-codigo").value.trim();
+    const erro = $("#criar-erro");
+    erro.textContent = "";
+    if (usuario.length < 3) { erro.textContent = "O usuário precisa ter ao menos 3 letras."; return; }
+    if (senha.length < 4) { erro.textContent = "A senha precisa ter ao menos 4 caracteres."; return; }
+    if (senha !== senha2) { erro.textContent = "As senhas não são iguais."; return; }
+    const btn = $("#btn-criar");
+    btn.disabled = true;
+    try {
+      const corpo = { op: "criar_conta", usuario, senha };
+      if (codigo) corpo.casal = codigo;
+      const r = await api(corpo);
+      usuarioLogado = usuario.toLowerCase();
+      try { localStorage.setItem(LOGIN_KEY, usuarioLogado); } catch {}
+      await entrarComCasal(r.casal);
+      renderLogin();
+      $("#form-criar").reset();
+      $("#form-login").reset();
+      toast("Conta criada! Bem-vindos 💛");
+    } catch (err) {
+      erro.textContent =
+        err.status === 409 ? "Esse usuário já existe. Escolha outro."
+        : err.status === 404 ? "Código do casal não encontrado. Confira e tente de novo."
+        : err.status === 400 ? "Confira os dados e tente de novo."
+        : "Não foi possível criar a conta. Verifique a internet e tente de novo.";
+    }
+    btn.disabled = false;
+  });
+
+  $("#btn-copiar-codigo").addEventListener("click", async () => {
+    const campo = $("#conta-codigo");
+    campo.select();
+    try {
+      await navigator.clipboard.writeText(casal);
+      toast("Código copiado 📋");
+    } catch {
+      toast("Selecione o código e copie manualmente");
+    }
   });
 
   $("#btn-sair-conta").addEventListener("click", () => {

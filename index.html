@@ -27,12 +27,28 @@
         <path d="M244 142l22-38 22 38" fill="none" stroke="#d4b46a" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
       <h1>Nosso Casamento</h1>
-      <p class="login-sub">Entre para planejar o grande dia</p>
-      <form id="form-login">
+      <p class="login-sub">Planejem o grande dia, juntos</p>
+
+      <div class="login-tabs" role="tablist">
+        <button type="button" class="login-tab is-active" data-aba="entrar">Entrar</button>
+        <button type="button" class="login-tab" data-aba="criar">Criar conta</button>
+      </div>
+
+      <form id="form-login" class="login-form is-active">
         <input type="text" id="login-usuario" placeholder="Usuário" autocomplete="username" autocapitalize="none" required maxlength="40">
         <input type="password" id="login-senha" placeholder="Senha" autocomplete="current-password" required maxlength="60">
         <button type="submit" class="btn-primary btn-block" id="btn-entrar">Entrar</button>
         <p class="login-erro" id="login-erro" role="alert"></p>
+      </form>
+
+      <form id="form-criar" class="login-form" hidden>
+        <input type="text" id="criar-usuario" placeholder="Escolha um usuário" autocomplete="username" autocapitalize="none" required maxlength="40">
+        <input type="password" id="criar-senha" placeholder="Crie uma senha" autocomplete="new-password" required maxlength="60">
+        <input type="password" id="criar-senha2" placeholder="Repita a senha" autocomplete="new-password" required maxlength="60">
+        <input type="text" id="criar-codigo" placeholder="Código do casal (opcional)" autocapitalize="none" maxlength="40">
+        <p class="login-dica">Deixe o código vazio para começar um casamento do zero. Para ver as mesmas listas do seu par, peça o <b>código do casal</b> dele(a) — fica em Configurações › Conta — e cole aqui.</p>
+        <button type="submit" class="btn-primary btn-block" id="btn-criar">Criar conta</button>
+        <p class="login-erro" id="criar-erro" role="alert"></p>
       </form>
     </div>
   </div>
@@ -272,8 +288,13 @@
           <h2>Conta</h2>
           <span class="sync-status" id="sync-status"></span>
         </div>
-        <p class="card-text">Conectado como <b id="conta-usuario">—</b>. Todos os celulares que entrarem com esta conta veem e editam as mesmas listas, com tudo guardado na nuvem.</p>
-        <button class="btn-danger" id="btn-sair-conta" type="button">Sair da conta neste aparelho</button>
+        <p class="card-text">Conectado como <b id="conta-usuario">—</b>. Tudo fica guardado na nuvem.</p>
+        <p class="card-text card-text-meio">Código do casal — dê para seu par usar ao <b>criar a conta dele(a)</b>, assim vocês veem e editam as mesmas listas:</p>
+        <div class="form-row">
+          <input type="text" id="conta-codigo" readonly>
+          <button class="btn-secondary btn-estreito" id="btn-copiar-codigo" type="button">Copiar</button>
+        </div>
+        <button class="btn-danger btn-desconectar" id="btn-sair-conta" type="button">Sair da conta neste aparelho</button>
       </div>
 
       <div class="card">

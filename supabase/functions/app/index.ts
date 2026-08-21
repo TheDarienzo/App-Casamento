@@ -68,6 +68,28 @@ Deno.serve(async (req: Request) => {
     return json({ casal: data });
   }
 
+  if (op === "criar_conta") {
+    const usuario = String(corpo.usuario ?? "").trim();
+    const senha = String(corpo.senha ?? "");
+    const casalRaw = corpo.casal ? String(corpo.casal).trim() : null;
+    if (!usuario || !senha) return json({ erro: "informe usuário e senha" }, 400);
+    if (casalRaw && !UUID_RE.test(casalRaw)) return json({ erro: "código do casal inválido" }, 400);
+    const { data, error } = await supabase.rpc("criar_conta", {
+      p_usuario: usuario,
+      p_senha: senha,
+      p_casal: casalRaw,
+    });
+    if (error) {
+      const m = error.message || "";
+      if (m.includes("usuario_existe")) return json({ erro: "esse usuário já existe" }, 409);
+      if (m.includes("usuario_curto")) return json({ erro: "o usuário precisa ter ao menos 3 letras" }, 400);
+      if (m.includes("senha_curta")) return json({ erro: "a senha precisa ter ao menos 4 caracteres" }, 400);
+      if (m.includes("casal_invalido")) return json({ erro: "código do casal não encontrado" }, 404);
+      return json({ erro: "falha ao criar conta" }, 500);
+    }
+    return json({ casal: data });
+  }
+
   if (op === "criar") {
     const estado = typeof corpo.estado === "object" && corpo.estado !== null ? corpo.estado : {};
     const { data, error } = await supabase
