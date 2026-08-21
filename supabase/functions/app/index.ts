@@ -55,6 +55,19 @@ Deno.serve(async (req: Request) => {
 
   const op = corpo.op;
 
+  if (op === "login") {
+    const usuario = String(corpo.usuario ?? "").trim();
+    const senha = String(corpo.senha ?? "");
+    if (!usuario || !senha) return json({ erro: "informe usuário e senha" }, 400);
+    const { data, error } = await supabase.rpc("login_usuario", {
+      p_usuario: usuario,
+      p_senha: senha,
+    });
+    if (error) return json({ erro: "falha no login" }, 500);
+    if (!data) return json({ erro: "usuário ou senha incorretos" }, 401);
+    return json({ casal: data });
+  }
+
   if (op === "criar") {
     const estado = typeof corpo.estado === "object" && corpo.estado !== null ? corpo.estado : {};
     const { data, error } = await supabase

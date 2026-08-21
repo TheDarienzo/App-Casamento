@@ -1,7 +1,7 @@
 /* Service worker — Nosso Casamento
    Estratégia: cache-first para o app shell, com atualização em segundo plano. */
 
-const CACHE = "nosso-casamento-v2";
+const CACHE = "nosso-casamento-v3";
 
 const SHELL = [
   "./",

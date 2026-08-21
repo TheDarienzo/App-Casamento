@@ -621,11 +621,9 @@
   }
 
   function renderSync() {
-    const ligado = Boolean(casal);
-    $("#sync-off").hidden = ligado;
-    $("#sync-on").hidden = !ligado;
+    $("#conta-usuario").textContent = usuarioLogado || "—";
     const status = $("#sync-status");
-    if (!ligado) {
+    if (!casal) {
       status.textContent = "";
     } else if (syncPendente) {
       status.textContent = "aguardando conexão";
@@ -634,59 +632,77 @@
       status.textContent = "sincronizado ✓";
       status.className = "sync-status is-ok";
     }
-    if (ligado) $("#sync-codigo").value = casal;
   }
 
-  $("#btn-sync-ativar").addEventListener("click", async () => {
-    const btn = $("#btn-sync-ativar");
-    btn.disabled = true;
+  /* ---------- login ---------- */
+
+  const LOGIN_KEY = "nosso-casamento-usuario";
+  let usuarioLogado = "";
+  try { usuarioLogado = localStorage.getItem(LOGIN_KEY) || ""; } catch {}
+
+  function renderLogin() {
+    $("#login-screen").hidden = Boolean(usuarioLogado);
+  }
+
+  // Após o login, decide a direção da sincronização: se a nuvem já tem
+  // dados, ela manda; se está vazia, sobe o que já existe neste aparelho.
+  async function entrarComCasal(codigo) {
+    guardarCasal(codigo);
     try {
-      const r = await api({ op: "criar", estado: state });
-      guardarCasal(r.casal);
-      toast("Sincronização ativada! Compartilhe o código com seu par 💛");
+      const r = await api({ op: "estado", casal: codigo });
+      const nuvem = r.estado || {};
+      const nuvemTemDados =
+        (nuvem.convidados || []).length ||
+        (nuvem.itens || []).length ||
+        (nuvem.padrinhos || []).length ||
+        (nuvem.fornecedores || []).length ||
+        (nuvem.config && (nuvem.config.noiva || nuvem.config.noivo || nuvem.config.data));
+      if (nuvemTemDados) {
+        state = { ...estadoInicial(), ...nuvem, config: { ...estadoInicial().config, ...(nuvem.config || {}) } };
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
+        preencherConfig();
+        renderTudo();
+      } else {
+        enviarAgora();
+      }
+      syncPendente = false;
     } catch {
-      toast("Não foi possível ativar agora. Tente de novo em instantes.");
+      syncPendente = true;
+    }
+    renderSync();
+  }
+
+  $("#form-login").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const usuario = $("#login-usuario").value.trim();
+    const senha = $("#login-senha").value;
+    const btn = $("#btn-entrar");
+    btn.disabled = true;
+    $("#login-erro").textContent = "";
+    try {
+      const r = await api({ op: "login", usuario, senha });
+      usuarioLogado = usuario.toLowerCase();
+      try { localStorage.setItem(LOGIN_KEY, usuarioLogado); } catch {}
+      await entrarComCasal(r.casal);
+      renderLogin();
+      e.target.reset();
+      toast("Bem-vindos! 💛");
+    } catch (err) {
+      $("#login-erro").textContent =
+        err.status === 401
+          ? "Usuário ou senha incorretos."
+          : "Não foi possível entrar. Verifique a internet e tente de novo.";
     }
     btn.disabled = false;
   });
 
-  $("#btn-sync-conectar").addEventListener("click", async () => {
-    const codigo = $("#sync-codigo-entrada").value.trim();
-    if (!codigo) {
-      toast("Cole o código do casal primeiro");
-      return;
-    }
-    try {
-      const r = await api({ op: "estado", casal: codigo });
-      const temDadosLocais = state.convidados.length || state.itens.length || state.padrinhos.length;
-      if (temDadosLocais && !confirm("Conectar substitui os dados deste aparelho pelos da nuvem. Continuar?")) return;
-      state = { ...estadoInicial(), ...r.estado, config: { ...estadoInicial().config, ...(r.estado.config || {}) } };
-      guardarCasal(codigo);
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
-      preencherConfig();
-      renderTudo();
-      $("#sync-codigo-entrada").value = "";
-      toast("Conectado! Os dados agora ficam em sincronia ✨");
-    } catch (e) {
-      toast(e.status === 404 ? "Código não encontrado. Confira e tente de novo." : "Não foi possível conectar agora.");
-    }
-  });
-
-  $("#btn-sync-copiar").addEventListener("click", async () => {
-    const campo = $("#sync-codigo");
-    campo.select();
-    try {
-      await navigator.clipboard.writeText(casal);
-      toast("Código copiado 📋");
-    } catch {
-      toast("Selecione o código e copie manualmente");
-    }
-  });
-
-  $("#btn-sync-sair").addEventListener("click", () => {
-    if (!confirm("Desconectar este aparelho? Os dados continuam aqui e na nuvem, mas param de sincronizar.")) return;
+  $("#btn-sair-conta").addEventListener("click", () => {
+    if (!confirm("Sair da conta neste aparelho? Os dados continuam salvos na nuvem.")) return;
+    usuarioLogado = "";
+    try { localStorage.removeItem(LOGIN_KEY); } catch {}
     guardarCasal("");
-    toast("Aparelho desconectado");
+    renderLogin();
+    toast("Você saiu da conta");
   });
 
   async function baixarDaNuvem() {
@@ -700,9 +716,9 @@
       renderTudo();
     } catch (e) {
       if (e.status === 404) {
-        // código apagado no servidor: mantém os dados locais e desconecta
+        // registro apagado no servidor: mantém os dados locais e desconecta
         guardarCasal("");
-        toast("O código do casal não existe mais; sincronização desativada.");
+        toast("A conta foi desconectada; entre novamente.");
       } else {
         syncPendente = true;
       }
@@ -739,6 +755,7 @@
   preencherConfig();
   renderTudo();
   renderSync();
+  renderLogin();
   baixarDaNuvem();
 
   // primeira visita: leva direto para a configuração

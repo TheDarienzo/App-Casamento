@@ -19,6 +19,24 @@
 </head>
 <body>
 
+  <div class="login-screen" id="login-screen" hidden>
+    <div class="login-card">
+      <svg class="login-aneis" viewBox="0 0 512 512" width="72" height="72" aria-hidden="true">
+        <circle cx="216" cy="280" r="104" fill="none" stroke="#d4b46a" stroke-width="22"/>
+        <circle cx="316" cy="280" r="104" fill="none" stroke="#c98a80" stroke-width="22"/>
+        <path d="M244 142l22-38 22 38" fill="none" stroke="#d4b46a" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <h1>Nosso Casamento</h1>
+      <p class="login-sub">Entre para planejar o grande dia</p>
+      <form id="form-login">
+        <input type="text" id="login-usuario" placeholder="Usuário" autocomplete="username" autocapitalize="none" required maxlength="40">
+        <input type="password" id="login-senha" placeholder="Senha" autocomplete="current-password" required maxlength="60">
+        <button type="submit" class="btn-primary btn-block" id="btn-entrar">Entrar</button>
+        <p class="login-erro" id="login-erro" role="alert"></p>
+      </form>
+    </div>
+  </div>
+
   <header class="app-header">
     <div class="header-inner">
       <div class="monogram" id="monogram">N&amp;N</div>
@@ -251,26 +269,11 @@
 
       <div class="card">
         <div class="card-head">
-          <h2>Sincronizar entre celulares</h2>
+          <h2>Conta</h2>
           <span class="sync-status" id="sync-status"></span>
         </div>
-        <div id="sync-off">
-          <p class="card-text">Ative para guardar os dados na nuvem e os dois celulares verem as mesmas listas. Vocês compartilham um <b>código secreto do casal</b>.</p>
-          <button class="btn-primary btn-block" id="btn-sync-ativar" type="button">Ativar sincronização</button>
-          <p class="card-text card-text-meio">Seu par já ativou? Cole o código aqui:</p>
-          <div class="form-row">
-            <input type="text" id="sync-codigo-entrada" placeholder="código do casal" autocomplete="off">
-            <button class="btn-secondary btn-estreito" id="btn-sync-conectar" type="button">Conectar</button>
-          </div>
-        </div>
-        <div id="sync-on" hidden>
-          <p class="card-text">Compartilhe este código com seu par (pelo WhatsApp, por exemplo). No outro celular: <b>Configurações → colar o código → Conectar</b>. Guarde-o com carinho: quem tem o código acessa os dados.</p>
-          <div class="form-row">
-            <input type="text" id="sync-codigo" readonly>
-            <button class="btn-secondary btn-estreito" id="btn-sync-copiar" type="button">Copiar</button>
-          </div>
-          <button class="btn-danger btn-desconectar" id="btn-sync-sair" type="button">Desconectar este aparelho</button>
-        </div>
+        <p class="card-text">Conectado como <b id="conta-usuario">—</b>. Todos os celulares que entrarem com esta conta veem e editam as mesmas listas, com tudo guardado na nuvem.</p>
+        <button class="btn-danger" id="btn-sair-conta" type="button">Sair da conta neste aparelho</button>
       </div>
 
       <div class="card">

@@ -542,6 +542,70 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
 
 .card-danger { border-color: rgba(176, 80, 60, 0.35); }
 
+/* ---------- Login ---------- */
+
+.login-screen[hidden] { display: none; }
+
+.login-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background-color: var(--ivory);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(212, 180, 106, 0.25), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(201, 138, 128, 0.12), transparent 55%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 360px;
+  background: var(--paper);
+  border: 1px solid rgba(179, 137, 46, 0.25);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+  padding: 34px 26px 28px;
+  text-align: center;
+  animation: viewIn 0.4s ease both;
+}
+
+.login-aneis { margin-bottom: 6px; }
+
+.login-card h1 {
+  font-family: var(--font-display);
+  font-weight: 550;
+  font-size: 1.7rem;
+}
+
+.login-sub {
+  font-family: var(--font-display);
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 2px 0 20px;
+}
+
+.login-card form { display: flex; flex-direction: column; gap: 10px; }
+
+.login-card input {
+  width: 100%;
+  border: 1.5px solid var(--ivory-deep);
+  background: var(--ivory);
+  border-radius: 12px;
+  padding: 12px 14px;
+  text-align: center;
+}
+.login-card input:focus { outline: none; border-color: var(--gold-soft); }
+
+.login-erro {
+  min-height: 1.2em;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--danger);
+}
+
 /* ---------- Sincronização ---------- */
 
 .sync-status {
