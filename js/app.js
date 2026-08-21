@@ -245,6 +245,10 @@
     const presTemos = pres.filter((p) => p.status !== "falta").length;
     $("#resumo-presentes-frac").textContent = `${presTemos}/${pres.length}`;
     $("#presentes-progress").style.width = pres.length ? (presTemos / pres.length) * 100 + "%" : "0%";
+    $("#stat-presentes").textContent = pres.length;
+    $("#stat-presentes-sub").textContent = pres.length
+      ? `${presTemos} já ${presTemos === 1 ? "conquistado" : "conquistados"}`
+      : "nenhum ainda";
 
     // lados
     $("#resumo-lado-a").textContent = ladoNoiva;

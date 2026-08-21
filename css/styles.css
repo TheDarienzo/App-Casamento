@@ -244,6 +244,7 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
   transition: transform 0.15s, box-shadow 0.15s;
 }
 .stat-card:active { transform: scale(0.97); }
+.stat-wide { grid-column: span 2; }
 
 .stat-num {
   font-family: var(--font-display);
