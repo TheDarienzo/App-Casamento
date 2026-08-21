@@ -14,7 +14,7 @@
   const API_URL = "https://rgxkmntpdbvvqcwksrwl.supabase.co/functions/v1/app/api";
 
   const estadoInicial = () => ({
-    config: { noiva: "", noivo: "", data: "", local: "" },
+    config: { noiva: "", noivo: "", data: "", local: "", foto: "" },
     convidados: [],   // { id, nome, lado: "noiva"|"noivo", acompanhantes, confirmado }
     itens: [],        // { id, descricao, valor (centavos), resolvido }
     padrinhos: [],    // { id, padrinho, madrinha }
@@ -169,13 +169,22 @@
 
   /* ---------- cabeçalho ---------- */
 
+  function iniciaisCasal() {
+    const { noiva, noivo } = state.config;
+    if (!noiva.trim() && !noivo.trim()) return "N&N";
+    return `${nomeNoiva()[0].toUpperCase()}&${nomeNoivo()[0].toUpperCase()}`;
+  }
+
   function renderHeader() {
-    const { noiva, noivo, data } = state.config;
+    const { noiva, noivo, data, foto } = state.config;
     const temNomes = noiva.trim() || noivo.trim();
     $("#header-couple").textContent = temNomes ? `${nomeNoiva()} & ${nomeNoivo()}` : "Nosso Casamento";
-    $("#monogram").textContent = temNomes
-      ? `${nomeNoiva()[0].toUpperCase()}&${nomeNoivo()[0].toUpperCase()}`
-      : "N&N";
+    const mono = $("#monogram");
+    if (foto) {
+      mono.innerHTML = `<img src="${escapeAttr(foto)}" alt="Foto do casal">`;
+    } else {
+      mono.textContent = iniciaisCasal();
+    }
     $("#header-date").textContent = data
       ? new Date(data).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })
       : "Configure a data do grande dia";
@@ -619,6 +628,23 @@
     $("#config-noivo").value = state.config.noivo;
     $("#config-data").value = state.config.data;
     $("#config-local").value = state.config.local;
+    atualizarPreviewFoto();
+  }
+
+  function atualizarPreviewFoto() {
+    const preview = $("#config-foto-preview");
+    const foto = state.config.foto;
+    if (foto) {
+      preview.style.backgroundImage = `url("${foto}")`;
+      preview.textContent = "";
+      $("#btn-remover-foto").hidden = false;
+      $("#btn-escolher-foto").textContent = "Trocar foto";
+    } else {
+      preview.style.backgroundImage = "";
+      preview.textContent = iniciaisCasal();
+      $("#btn-remover-foto").hidden = true;
+      $("#btn-escolher-foto").textContent = "Escolher foto";
+    }
   }
 
   $("#form-config").addEventListener("submit", (e) => {
@@ -631,6 +657,66 @@
     renderTudo();
     toast("Configurações salvas 💾");
     irPara("dashboard");
+  });
+
+  /* ---------- foto do casal ---------- */
+
+  // Reduz a imagem para caber com folga no estado sincronizado (limite ~512KB).
+  function lerFotoReduzida(arquivo, cb) {
+    const leitor = new FileReader();
+    leitor.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 400;
+        const escala = Math.min(1, MAX / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * escala));
+        const h = Math.max(1, Math.round(img.height * escala));
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        try {
+          cb(canvas.toDataURL("image/jpeg", 0.82));
+        } catch {
+          cb(null);
+        }
+      };
+      img.onerror = () => cb(null);
+      img.src = leitor.result;
+    };
+    leitor.onerror = () => cb(null);
+    leitor.readAsDataURL(arquivo);
+  }
+
+  $("#btn-escolher-foto").addEventListener("click", () => $("#input-foto").click());
+
+  $("#input-foto").addEventListener("change", (e) => {
+    const arquivo = e.target.files[0];
+    e.target.value = "";
+    if (!arquivo) return;
+    if (!arquivo.type.startsWith("image/")) {
+      toast("Escolha um arquivo de imagem");
+      return;
+    }
+    lerFotoReduzida(arquivo, (dataUrl) => {
+      if (!dataUrl) {
+        toast("Não foi possível usar essa imagem 😢");
+        return;
+      }
+      state.config.foto = dataUrl;
+      salvar();
+      atualizarPreviewFoto();
+      renderHeader();
+      toast("Foto do casal atualizada 📸");
+    });
+  });
+
+  $("#btn-remover-foto").addEventListener("click", () => {
+    state.config.foto = "";
+    salvar();
+    atualizarPreviewFoto();
+    renderHeader();
+    toast("Foto removida");
   });
 
   $("#btn-exportar").addEventListener("click", () => {
@@ -900,14 +986,22 @@
     }
   });
 
-  $("#btn-sair-conta").addEventListener("click", () => {
+  function fazerLogout() {
     if (!confirm("Sair da conta neste aparelho? Os dados continuam salvos na nuvem.")) return;
     usuarioLogado = "";
     try { localStorage.removeItem(LOGIN_KEY); } catch {}
     guardarCasal("");
+    ultimoAtualizadoEm = null;
     renderLogin();
+    // volta a tela de login para a aba "Entrar"
+    const abaEntrar = document.querySelector('.login-tab[data-aba="entrar"]');
+    if (abaEntrar) abaEntrar.click();
+    irPara("dashboard");
     toast("Você saiu da conta");
-  });
+  }
+
+  $("#btn-sair-conta").addEventListener("click", fazerLogout);
+  $("#btn-logout").addEventListener("click", fazerLogout);
 
   async function baixarDaNuvem() {
     if (!casal) return;

@@ -63,6 +63,9 @@
       <button class="btn-icon" id="btn-config" aria-label="Configurações" title="Configurações">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.09a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
+      <button class="btn-icon" id="btn-logout" aria-label="Sair da conta" title="Sair da conta">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9"/><path d="M11 12h10m0 0-3.5-3.5M21 12l-3.5 3.5"/></svg>
+      </button>
     </div>
   </header>
 
@@ -313,6 +316,17 @@
       </div>
 
       <form class="form-card" id="form-config">
+        <div class="field">
+          <span>Foto do casal (opcional)</span>
+          <div class="foto-row">
+            <div class="foto-preview" id="config-foto-preview" aria-hidden="true">N&amp;N</div>
+            <div class="foto-acoes">
+              <button type="button" class="btn-secondary" id="btn-escolher-foto">Escolher foto</button>
+              <button type="button" class="btn-danger btn-remover-foto" id="btn-remover-foto" hidden>Remover foto</button>
+            </div>
+          </div>
+          <input type="file" id="input-foto" accept="image/*" hidden>
+        </div>
         <label class="field">
           <span>Nome da noiva</span>
           <input type="text" id="config-noiva" placeholder="Ex.: Maria" maxlength="40">
