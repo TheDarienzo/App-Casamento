@@ -1266,3 +1266,51 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
   font-size: 0.9rem;
 }
 .juntar-box input:focus { outline: none; border-color: var(--gold-soft); }
+
+/* ---------- Edição direto na lista ---------- */
+
+.btn-editar {
+  background: none;
+  border: none;
+  color: var(--ink-faint);
+  padding: 6px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  transition: color 0.2s, background 0.2s;
+}
+.btn-editar:hover { color: var(--gold); background: var(--ivory-deep); }
+
+.list-item.is-editing,
+.pair-item.is-editing {
+  display: block;
+  background: var(--paper);
+  border-color: var(--gold-soft);
+  box-shadow: 0 0 0 2px rgba(212, 180, 106, 0.35);
+  padding: 14px;
+}
+
+.edit-form { display: flex; flex-direction: column; gap: 9px; }
+
+.edit-form input[type="text"],
+.edit-form input[type="tel"],
+.edit-form select {
+  width: 100%;
+  border: 1.5px solid var(--ivory-deep);
+  background: var(--ivory);
+  border-radius: 12px;
+  padding: 10px 13px;
+  font-size: 0.95rem;
+  appearance: none;
+}
+.edit-form input:focus, .edit-form select:focus { outline: none; border-color: var(--gold-soft); }
+
+.edit-form .form-row { flex-wrap: wrap; gap: 9px; }
+.edit-form .seg-control { flex-basis: 100%; }
+.edit-form .field-inline { flex: 1; background: var(--ivory); }
+.edit-form .field-inline input { width: 100%; border: none !important; background: none !important; }
+.edit-form .form-row-stack input { flex: 1; min-width: 0; }
+
+.edit-acoes { display: flex; gap: 9px; margin-top: 2px; }
+.edit-acoes button { flex: 1; padding: 9px 12px; font-size: 0.88rem; }

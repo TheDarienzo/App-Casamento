@@ -31,6 +31,7 @@
   let buscaNotas = "";
   let notaEditando = "";
   let membrosCasal = [];
+  let editandoId = "";  // item aberto para edição (qualquer lista)
 
   /* ---------- persistência ---------- */
 
@@ -108,6 +109,33 @@
     '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m3 0-.8 12.1a2 2 0 0 1-2 1.9H8.8a2 2 0 0 1-2-1.9L6 7"/><path d="M10 11v6M14 11v6"/></svg>';
   const iconeCheck =
     '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4 10-10"/></svg>';
+
+  const CATEGORIAS_FORNECEDOR = [
+    "Buffet", "Fotografia", "Música / DJ", "Decoração", "Espaço / Local",
+    "Vestido & Traje", "Doces & Bolo", "Convites", "Cerimonial", "Outro",
+  ];
+
+  const btnEditar = (rotulo) =>
+    `<button class="btn-editar" data-acao="editar" aria-label="Editar ${rotulo}" title="Editar">${iconeEditar}</button>`;
+
+  const acoesEdicao = () =>
+    `<div class="edit-acoes">
+      <button type="button" class="btn-secondary" data-acao="cancelar">Cancelar</button>
+      <button type="button" class="btn-primary" data-acao="salvar">Salvar</button>
+    </div>`;
+
+  // abre um item para edição e leva o cursor para o primeiro campo
+  function abrirEdicao(id) {
+    editandoId = id;
+    renderTudo();
+    const campo = document.querySelector(`[data-id="${id}"] .ed-foco`);
+    if (campo) {
+      campo.focus();
+      if (campo.setSelectionRange) campo.setSelectionRange(campo.value.length, campo.value.length);
+    }
+  }
+
+  const valorParaCampo = (centavos) => (centavos ? (centavos / 100).toFixed(2).replace(".", ",") : "");
 
   /* ---------- navegação ---------- */
 
@@ -331,6 +359,24 @@
 
     lista.innerHTML = filtrados
       .map((c) => {
+        if (editandoId === c.id) {
+          return `<li class="list-item is-editing" data-id="${c.id}">
+            <div class="edit-form">
+              <input type="text" class="ed-nome ed-foco" value="${escapeAttr(c.nome)}" maxlength="80" placeholder="Nome do convidado">
+              <div class="form-row">
+                <div class="seg-control" role="radiogroup" aria-label="Lado">
+                  <label><input type="radio" name="ed-lado" value="noiva" ${c.lado === "noiva" ? "checked" : ""}><span>${escapeHtml(nomeNoiva())}</span></label>
+                  <label><input type="radio" name="ed-lado" value="noivo" ${c.lado === "noivo" ? "checked" : ""}><span>${escapeHtml(nomeNoivo())}</span></label>
+                </div>
+                <label class="field-inline">
+                  <span>+ acomp.</span>
+                  <input type="number" class="ed-acomp" min="0" max="20" value="${c.acompanhantes || 0}">
+                </label>
+              </div>
+              ${acoesEdicao()}
+            </div>
+          </li>`;
+        }
         const pessoas = totalPessoas(c);
         const badge =
           c.lado === "noiva"
@@ -342,6 +388,7 @@
             <div class="item-title">${escapeHtml(c.nome)}</div>
             <div class="item-meta">${badge}<span>${pessoas} pessoa${pessoas === 1 ? "" : "s"}${c.acompanhantes ? ` (+${c.acompanhantes} acomp.)` : ""}</span></div>
           </div>
+          ${btnEditar("convidado")}
           <button class="btn-remove" data-acao="remover" aria-label="Remover">${iconeLixeira}</button>
         </li>`;
       })
@@ -377,9 +424,35 @@
     const id = btn.closest("[data-id]").dataset.id;
     const c = state.convidados.find((x) => x.id === id);
     if (!c) return;
-    if (btn.dataset.acao === "confirmar") {
+    const acao = btn.dataset.acao;
+    if (acao === "editar") {
+      abrirEdicao(id);
+      return;
+    }
+    if (acao === "cancelar") {
+      editandoId = "";
+      renderConvidados();
+      return;
+    }
+    if (acao === "salvar") {
+      const li = btn.closest("[data-id]");
+      const nome = li.querySelector(".ed-nome").value.trim();
+      if (!nome) {
+        toast("O nome não pode ficar vazio");
+        return;
+      }
+      c.nome = nome;
+      c.lado = li.querySelector('input[name="ed-lado"]:checked').value;
+      c.acompanhantes = Math.max(0, Math.min(20, parseInt(li.querySelector(".ed-acomp").value, 10) || 0));
+      editandoId = "";
+      salvar();
+      renderTudo();
+      toast("Convidado atualizado ✅");
+      return;
+    }
+    if (acao === "confirmar") {
       c.confirmado = !c.confirmado;
-    } else if (btn.dataset.acao === "remover") {
+    } else if (acao === "remover") {
       if (!confirm(`Remover ${c.nome} da lista?`)) return;
       state.convidados = state.convidados.filter((x) => x.id !== id);
     }
@@ -408,16 +481,29 @@
     });
 
     lista.innerHTML = filtrados
-      .map(
-        (i) => `<li class="list-item ${i.resolvido ? "is-done" : ""}" data-id="${i.id}">
+      .map((i) => {
+        if (editandoId === i.id) {
+          return `<li class="list-item is-editing" data-id="${i.id}">
+            <div class="edit-form">
+              <input type="text" class="ed-desc ed-foco" value="${escapeAttr(i.descricao)}" maxlength="120" placeholder="O que precisa ser resolvido?">
+              <label class="field-inline field-money">
+                <span>R$</span>
+                <input type="text" class="ed-valor" inputmode="decimal" value="${valorParaCampo(i.valor)}" placeholder="0,00">
+              </label>
+              ${acoesEdicao()}
+            </div>
+          </li>`;
+        }
+        return `<li class="list-item ${i.resolvido ? "is-done" : ""}" data-id="${i.id}">
           <button class="check-toggle ${i.resolvido ? "is-on" : ""}" data-acao="resolver" aria-label="Marcar como resolvido" title="Marcar como resolvido">${iconeCheck}</button>
           <div class="item-main">
             <div class="item-title">${escapeHtml(i.descricao)}</div>
           </div>
           ${i.valor ? `<span class="item-valor">${brl(i.valor)}</span>` : ""}
+          ${btnEditar("tarefa")}
           <button class="btn-remove" data-acao="remover" aria-label="Remover">${iconeLixeira}</button>
-        </li>`
-      )
+        </li>`;
+      })
       .join("");
 
     $("#checklist-empty").classList.toggle("is-visible", itens.length === 0);
@@ -453,10 +539,35 @@
     const id = btn.closest("[data-id]").dataset.id;
     const item = state.itens.find((x) => x.id === id);
     if (!item) return;
-    if (btn.dataset.acao === "resolver") {
+    const acao = btn.dataset.acao;
+    if (acao === "editar") {
+      abrirEdicao(id);
+      return;
+    }
+    if (acao === "cancelar") {
+      editandoId = "";
+      renderChecklist();
+      return;
+    }
+    if (acao === "salvar") {
+      const li = btn.closest("[data-id]");
+      const desc = li.querySelector(".ed-desc").value.trim();
+      if (!desc) {
+        toast("A descrição não pode ficar vazia");
+        return;
+      }
+      item.descricao = desc;
+      item.valor = parseValor(li.querySelector(".ed-valor").value);
+      editandoId = "";
+      salvar();
+      renderTudo();
+      toast("Tarefa atualizada ✅");
+      return;
+    }
+    if (acao === "resolver") {
       item.resolvido = !item.resolvido;
       if (item.resolvido) toast("Resolvido! 🎉");
-    } else if (btn.dataset.acao === "remover") {
+    } else if (acao === "remover") {
       if (!confirm(`Remover "${item.descricao}"?`)) return;
       state.itens = state.itens.filter((x) => x.id !== id);
     }
@@ -477,17 +588,30 @@
   function renderPadrinhos() {
     const lista = $("#lista-padrinhos");
     lista.innerHTML = state.padrinhos
-      .map(
-        (p, idx) => `<li class="pair-item" data-id="${p.id}">
+      .map((p, idx) => {
+        if (editandoId === p.id) {
+          return `<li class="pair-item is-editing" data-id="${p.id}">
+            <div class="edit-form">
+              <div class="form-row form-row-stack">
+                <input type="text" class="ed-padrinho ed-foco" value="${escapeAttr(p.padrinho)}" maxlength="80" placeholder="Padrinho">
+                <span class="amp">&amp;</span>
+                <input type="text" class="ed-madrinha" value="${escapeAttr(p.madrinha)}" maxlength="80" placeholder="Madrinha">
+              </div>
+              ${acoesEdicao()}
+            </div>
+          </li>`;
+        }
+        return `<li class="pair-item" data-id="${p.id}">
           <span class="pair-num">${idx + 1}</span>
           <div class="pair-names">
             <span class="nome">${escapeHtml(p.padrinho)}</span>
             <span class="amp">&amp;</span>
             <span class="nome">${escapeHtml(p.madrinha)}</span>
           </div>
+          ${btnEditar("par")}
           <button class="btn-remove" data-acao="remover" aria-label="Remover par">${iconeLixeira}</button>
-        </li>`
-      )
+        </li>`;
+      })
       .join("");
 
     $("#padrinhos-empty").classList.toggle("is-visible", state.padrinhos.length === 0);
@@ -517,6 +641,32 @@
     const id = btn.closest("[data-id]").dataset.id;
     const p = state.padrinhos.find((x) => x.id === id);
     if (!p) return;
+    const acao = btn.dataset.acao;
+    if (acao === "editar") {
+      abrirEdicao(id);
+      return;
+    }
+    if (acao === "cancelar") {
+      editandoId = "";
+      renderPadrinhos();
+      return;
+    }
+    if (acao === "salvar") {
+      const li = btn.closest("[data-id]");
+      const padrinho = li.querySelector(".ed-padrinho").value.trim();
+      const madrinha = li.querySelector(".ed-madrinha").value.trim();
+      if (!padrinho || !madrinha) {
+        toast("Preencha os dois nomes do par");
+        return;
+      }
+      p.padrinho = padrinho;
+      p.madrinha = madrinha;
+      editandoId = "";
+      salvar();
+      renderTudo();
+      toast("Par atualizado ✅");
+      return;
+    }
     if (!confirm(`Remover ${p.padrinho} & ${p.madrinha}?`)) return;
     state.padrinhos = state.padrinhos.filter((x) => x.id !== id);
     salvar();
@@ -529,6 +679,21 @@
     const lista = $("#lista-fornecedores");
     lista.innerHTML = state.fornecedores
       .map((f) => {
+        if (editandoId === f.id) {
+          const opcoes = CATEGORIAS_FORNECEDOR.map(
+            (cat) => `<option ${cat === f.categoria ? "selected" : ""}>${escapeHtml(cat)}</option>`
+          ).join("");
+          return `<li class="list-item is-editing" data-id="${f.id}">
+            <div class="edit-form">
+              <input type="text" class="ed-nome ed-foco" value="${escapeAttr(f.nome)}" maxlength="80" placeholder="Nome do fornecedor">
+              <div class="form-row">
+                <select class="ed-categoria">${opcoes}</select>
+                <input type="tel" class="ed-contato" value="${escapeAttr(f.contato || "")}" maxlength="20" placeholder="WhatsApp / telefone">
+              </div>
+              ${acoesEdicao()}
+            </div>
+          </li>`;
+        }
         const tel = (f.contato || "").replace(/\D/g, "");
         const linkContato = tel
           ? `<a class="link-contato" href="https://wa.me/55${tel}" target="_blank" rel="noopener">WhatsApp: ${escapeHtml(f.contato)}</a>`
@@ -538,6 +703,7 @@
             <div class="item-title">${escapeHtml(f.nome)}</div>
             <div class="item-meta"><span class="badge badge-cat">${escapeHtml(f.categoria)}</span>${linkContato}</div>
           </div>
+          ${btnEditar("fornecedor")}
           <button class="btn-remove" data-acao="remover" aria-label="Remover">${iconeLixeira}</button>
         </li>`;
       })
@@ -574,6 +740,32 @@
     const id = btn.closest("[data-id]").dataset.id;
     const f = state.fornecedores.find((x) => x.id === id);
     if (!f) return;
+    const acao = btn.dataset.acao;
+    if (acao === "editar") {
+      abrirEdicao(id);
+      return;
+    }
+    if (acao === "cancelar") {
+      editandoId = "";
+      renderFornecedores();
+      return;
+    }
+    if (acao === "salvar") {
+      const li = btn.closest("[data-id]");
+      const nome = li.querySelector(".ed-nome").value.trim();
+      if (!nome) {
+        toast("O nome não pode ficar vazio");
+        return;
+      }
+      f.nome = nome;
+      f.categoria = li.querySelector(".ed-categoria").value;
+      f.contato = li.querySelector(".ed-contato").value.trim();
+      editandoId = "";
+      salvar();
+      renderTudo();
+      toast("Fornecedor atualizado ✅");
+      return;
+    }
     if (!confirm(`Remover ${f.nome}?`)) return;
     state.fornecedores = state.fornecedores.filter((x) => x.id !== id);
     salvar();
@@ -600,6 +792,19 @@
 
     lista.innerHTML = filtrados
       .map((p) => {
+        if (editandoId === p.id) {
+          return `<li class="list-item is-editing" data-id="${p.id}">
+            <div class="edit-form">
+              <input type="text" class="ed-nome ed-foco" value="${escapeAttr(p.nome)}" maxlength="100" placeholder="Nome do presente">
+              <input type="text" class="ed-link" value="${escapeAttr(p.link || "")}" maxlength="300" inputmode="url" placeholder="Link da loja (opcional)">
+              <label class="field-inline field-money">
+                <span>R$</span>
+                <input type="text" class="ed-valor" inputmode="decimal" value="${valorParaCampo(p.valor)}" placeholder="0,00">
+              </label>
+              ${acoesEdicao()}
+            </div>
+          </li>`;
+        }
         const pego = p.status !== "falta";
         const link = p.link
           ? `<a class="link-contato" href="${escapeAttr(p.link)}" target="_blank" rel="noopener">ver loja ↗</a>`
@@ -612,6 +817,7 @@
             <div class="item-title">${escapeHtml(p.nome)}</div>
             ${meta}
           </div>
+          ${btnEditar("presente")}
           <button class="btn-remove" data-acao="remover" aria-label="Remover">${iconeLixeira}</button>
         </li>`;
       })
@@ -652,11 +858,37 @@
     const id = btn.closest("[data-id]").dataset.id;
     const p = state.presentes.find((x) => x.id === id);
     if (!p) return;
-    if (btn.dataset.acao === "status") {
+    const acao = btn.dataset.acao;
+    if (acao === "editar") {
+      abrirEdicao(id);
+      return;
+    }
+    if (acao === "cancelar") {
+      editandoId = "";
+      renderPresentes();
+      return;
+    }
+    if (acao === "salvar") {
+      const li = btn.closest("[data-id]");
+      const nome = li.querySelector(".ed-nome").value.trim();
+      if (!nome) {
+        toast("O nome não pode ficar vazio");
+        return;
+      }
+      p.nome = nome;
+      p.link = normalizarLink(li.querySelector(".ed-link").value);
+      p.valor = parseValor(li.querySelector(".ed-valor").value);
+      editandoId = "";
+      salvar();
+      renderTudo();
+      toast("Presente atualizado ✅");
+      return;
+    }
+    if (acao === "status") {
       p.status = PROXIMO_STATUS[p.status] || "falta";
       if (p.status === "comprado") toast("Marcado como comprado 🛒");
       else if (p.status === "ganho") toast("Que presente! 🎁💛");
-    } else if (btn.dataset.acao === "remover") {
+    } else if (acao === "remover") {
       if (!confirm(`Remover "${p.nome}" da lista?`)) return;
       state.presentes = state.presentes.filter((x) => x.id !== id);
     }
@@ -1098,6 +1330,7 @@
   // usuário está digitando num campo.
   async function puxarSeMudou() {
     if (!casal || envioPendente || syncPendente) return;
+    if (editandoId || notaEditando) return; // não sobrescreve algo sendo editado
     if (document.visibilityState !== "visible") return;
     const ativo = document.activeElement;
     if (ativo && /^(INPUT|TEXTAREA|SELECT)$/.test(ativo.tagName)) return;
@@ -1335,6 +1568,7 @@
     guardarCasal("");
     ultimoAtualizadoEm = null;
     membrosCasal = [];
+    editandoId = "";
     renderConta();
     renderLogin();
     // volta a tela de login para a aba "Entrar"
