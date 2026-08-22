@@ -1,0 +1,5 @@
+-- Junção de contas que ficaram em casamentos separados.
+-- mesclar_estados: une as listas por id (nada é perdido) e completa a config.
+-- juntar_ao_casal: valida senha, move o usuário e mescla/remove o casamento vazio.
+-- membros_do_casal: lista quem compartilha o mesmo casamento.
+-- (conteúdo aplicado no banco em 22/08/2026 — ver funções no Supabase)

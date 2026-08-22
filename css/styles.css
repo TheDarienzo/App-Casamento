@@ -1199,3 +1199,70 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
   .nav-item { font-size: 0.5rem; }
   .nav-item svg { width: 20px; height: 20px; }
 }
+
+/* ---------- Conta: membros e junção de contas ---------- */
+
+.membros-box { margin-bottom: 12px; }
+.membros-lista { display: flex; flex-wrap: wrap; gap: 6px; }
+.membro-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--ivory);
+  border: 1px solid rgba(179, 137, 46, 0.25);
+  border-radius: 99px;
+  padding: 4px 11px 4px 4px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+.membro-chip i {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-style: normal;
+  font-size: 0.72rem;
+  color: var(--paper);
+}
+.membro-chip.eu { border-color: var(--gold-soft); background: #f7eccd; color: var(--ink); }
+
+.aviso-sozinho {
+  background: var(--rose-soft);
+  border: 1px solid rgba(201, 138, 128, 0.5);
+  border-radius: 12px;
+  padding: 11px 13px;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: #8f4f45;
+  margin-bottom: 12px;
+}
+
+.juntar-box {
+  margin-top: 14px;
+  border-top: 1px dashed rgba(179, 137, 46, 0.3);
+  padding-top: 12px;
+}
+.juntar-box summary {
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: var(--gold);
+  cursor: pointer;
+  list-style: none;
+  padding: 2px 0;
+}
+.juntar-box summary::-webkit-details-marker { display: none; }
+.juntar-box summary::before { content: "＋ "; }
+.juntar-box[open] summary::before { content: "− "; }
+.juntar-box input {
+  width: 100%;
+  border: 1.5px solid var(--ivory-deep);
+  background: var(--ivory);
+  border-radius: 12px;
+  padding: 10px 13px;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+.juntar-box input:focus { outline: none; border-color: var(--gold-soft); }

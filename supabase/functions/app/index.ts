@@ -34,6 +34,11 @@ function json(dados: unknown, status = 200): Response {
   });
 }
 
+async function membros(casal: string): Promise<string[]> {
+  const { data } = await supabase.rpc("membros_do_casal", { p_casal: casal });
+  return Array.isArray(data) ? data : [];
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
 
@@ -65,7 +70,7 @@ Deno.serve(async (req: Request) => {
     });
     if (error) return json({ erro: "falha no login" }, 500);
     if (!data) return json({ erro: "usuário ou senha incorretos" }, 401);
-    return json({ casal: data });
+    return json({ casal: data, membros: await membros(data) });
   }
 
   if (op === "criar_conta") {
@@ -90,6 +95,26 @@ Deno.serve(async (req: Request) => {
     return json({ casal: data });
   }
 
+  if (op === "juntar") {
+    const usuario = String(corpo.usuario ?? "").trim();
+    const senha = String(corpo.senha ?? "");
+    const alvo = String(corpo.casal ?? "").trim();
+    if (!usuario || !senha) return json({ erro: "informe usuário e senha" }, 400);
+    if (!UUID_RE.test(alvo)) return json({ erro: "código do casal inválido" }, 400);
+    const { data, error } = await supabase.rpc("juntar_ao_casal", {
+      p_usuario: usuario,
+      p_senha: senha,
+      p_casal: alvo,
+    });
+    if (error) {
+      const m = error.message || "";
+      if (m.includes("login_invalido")) return json({ erro: "senha incorreta" }, 401);
+      if (m.includes("casal_invalido")) return json({ erro: "código do casal não encontrado" }, 404);
+      return json({ erro: "falha ao juntar as contas" }, 500);
+    }
+    return json({ casal: data, membros: await membros(String(data)) });
+  }
+
   if (op === "criar") {
     const estado = typeof corpo.estado === "object" && corpo.estado !== null ? corpo.estado : {};
     const { data, error } = await supabase
@@ -103,6 +128,10 @@ Deno.serve(async (req: Request) => {
 
   const casal = String(corpo.casal ?? "");
   if (!UUID_RE.test(casal)) return json({ erro: "código não encontrado" }, 404);
+
+  if (op === "membros") {
+    return json({ membros: await membros(casal) });
+  }
 
   if (op === "estado") {
     const { data, error } = await supabase

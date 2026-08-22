@@ -419,17 +419,38 @@
           <span class="sync-status" id="sync-status"></span>
         </div>
         <p class="card-text">Conectado como <b id="conta-usuario">—</b>. Tudo fica guardado na nuvem.</p>
+
+        <div class="membros-box" id="membros-box">
+          <p class="dash-list-titulo">Quem usa este casamento</p>
+          <div class="membros-lista" id="membros-lista"></div>
+        </div>
+
+        <div class="aviso-sozinho" id="aviso-sozinho" hidden>
+          <b>⚠️ Você está sozinho(a) neste casamento.</b>
+          Se seu par também usa o app, as listas de vocês estão separadas. Junte as contas abaixo — nada se perde, os dados dos dois são somados.
+        </div>
+
         <p class="card-text card-text-meio">Código do casal — dê para seu par usar ao <b>criar a conta dele(a)</b>, assim vocês veem e editam as mesmas listas:</p>
         <div class="form-row">
           <input type="text" id="conta-codigo" readonly>
           <button class="btn-secondary btn-estreito" id="btn-copiar-codigo" type="button">Copiar</button>
         </div>
+
+        <details class="juntar-box" id="juntar-box">
+          <summary>Juntar minha conta à do meu par</summary>
+          <p class="card-text">Peça o <b>código do casal</b> do seu par (fica aqui, na conta dele(a)), cole abaixo e confirme com a sua senha. As listas dos dois viram uma só.</p>
+          <input type="text" id="juntar-codigo" placeholder="código do casal do meu par" autocomplete="off" autocapitalize="none">
+          <input type="password" id="juntar-senha" placeholder="sua senha" autocomplete="current-password">
+          <button class="btn-primary btn-block" id="btn-juntar" type="button">Juntar as contas</button>
+          <p class="login-erro" id="juntar-erro" role="alert"></p>
+        </details>
+
         <button class="btn-danger btn-desconectar" id="btn-sair-conta" type="button">Sair da conta neste aparelho</button>
       </div>
 
       <div class="card">
         <div class="card-head"><h2>Backup dos dados</h2></div>
-        <p class="card-text">Os dados ficam salvos apenas neste aparelho. Exporte um arquivo de backup para guardar ou levar para outro celular.</p>
+        <p class="card-text">Os dados ficam na nuvem e neste aparelho. Exporte um arquivo de backup de vez em quando para guardar uma cópia de segurança de tudo.</p>
         <div class="form-row">
           <button class="btn-secondary" id="btn-exportar" type="button">Exportar backup</button>
           <button class="btn-secondary" id="btn-importar" type="button">Importar backup</button>
@@ -439,7 +460,7 @@
 
       <div class="card card-danger">
         <div class="card-head"><h2>Zona de perigo</h2></div>
-        <p class="card-text">Apaga todos os convidados, tarefas, padrinhos e fornecedores deste aparelho.</p>
+        <p class="card-text">Apaga convidados, tarefas, padrinhos, fornecedores, presentes e anotações — deste aparelho e da nuvem do casal.</p>
         <button class="btn-danger" id="btn-limpar" type="button">Apagar todos os dados</button>
       </div>
     </section>

@@ -30,6 +30,7 @@
   let filtroNotaAutor = "todos";
   let buscaNotas = "";
   let notaEditando = "";
+  let membrosCasal = [];
 
   /* ---------- persistência ---------- */
 
@@ -1141,6 +1142,66 @@
     }
   }
 
+  /* ---------- conta: com quem o casamento é compartilhado ---------- */
+
+  function renderConta() {
+    const box = $("#membros-box");
+    const lista = $("#membros-lista");
+    box.hidden = membrosCasal.length === 0;
+    lista.innerHTML = membrosCasal
+      .map((m) => {
+        const eu = m === usuarioLogado;
+        return `<span class="membro-chip ${eu ? "eu" : ""}"><i style="background:${corDoAutor(m)}">${escapeHtml(m[0].toUpperCase())}</i>${escapeHtml(m)}${eu ? " (você)" : ""}</span>`;
+      })
+      .join("");
+    // só avisa quando temos certeza de que a lista veio do servidor
+    $("#aviso-sozinho").hidden = membrosCasal.length !== 1;
+  }
+
+  async function buscarMembros() {
+    if (!casal) {
+      membrosCasal = [];
+      renderConta();
+      return;
+    }
+    try {
+      const r = await api({ op: "membros", casal });
+      membrosCasal = Array.isArray(r.membros) ? r.membros : [];
+    } catch {
+      membrosCasal = [];
+    }
+    renderConta();
+  }
+
+  $("#btn-juntar").addEventListener("click", async () => {
+    const codigo = $("#juntar-codigo").value.trim();
+    const senha = $("#juntar-senha").value;
+    const erro = $("#juntar-erro");
+    erro.textContent = "";
+    if (!codigo) { erro.textContent = "Cole o código do casal do seu par."; return; }
+    if (!senha) { erro.textContent = "Confirme com a sua senha."; return; }
+    if (!confirm("Juntar sua conta à do seu par? As listas dos dois serão somadas numa só.")) return;
+    const btn = $("#btn-juntar");
+    btn.disabled = true;
+    try {
+      const r = await api({ op: "juntar", usuario: usuarioLogado, senha, casal: codigo });
+      membrosCasal = Array.isArray(r.membros) ? r.membros : [];
+      await entrarComCasal(r.casal);
+      renderConta();
+      $("#juntar-codigo").value = "";
+      $("#juntar-senha").value = "";
+      $("#juntar-box").open = false;
+      toast("Contas juntas! Agora vocês veem as mesmas listas 💛");
+    } catch (e) {
+      erro.textContent =
+        e.status === 401 ? "Senha incorreta."
+        : e.status === 404 ? "Código do casal não encontrado. Confira e tente de novo."
+        : e.status === 400 ? "Código do casal inválido."
+        : "Não foi possível juntar agora. Verifique a internet e tente de novo.";
+    }
+    btn.disabled = false;
+  });
+
   /* ---------- login ---------- */
 
   const LOGIN_KEY = "nosso-casamento-usuario";
@@ -1206,7 +1267,9 @@
       const r = await api({ op: "login", usuario, senha });
       usuarioLogado = usuario.toLowerCase();
       try { localStorage.setItem(LOGIN_KEY, usuarioLogado); } catch {}
+      membrosCasal = Array.isArray(r.membros) ? r.membros : [];
       await entrarComCasal(r.casal);
+      renderConta();
       renderLogin();
       e.target.reset();
       toast("Bem-vindos! 💛");
@@ -1242,7 +1305,8 @@
       renderLogin();
       $("#form-criar").reset();
       $("#form-login").reset();
-      toast("Conta criada! Bem-vindos 💛");
+      buscarMembros();
+      toast(codigo ? "Conta criada! Vocês já compartilham as listas 💛" : "Conta criada! Bem-vindos 💛");
     } catch (err) {
       erro.textContent =
         err.status === 409 ? "Esse usuário já existe. Escolha outro."
@@ -1270,6 +1334,8 @@
     try { localStorage.removeItem(LOGIN_KEY); } catch {}
     guardarCasal("");
     ultimoAtualizadoEm = null;
+    membrosCasal = [];
+    renderConta();
     renderLogin();
     // volta a tela de login para a aba "Entrar"
     const abaEntrar = document.querySelector('.login-tab[data-aba="entrar"]');
@@ -1342,6 +1408,7 @@
   renderSync();
   renderLogin();
   baixarDaNuvem();
+  buscarMembros();
 
   // primeira visita: leva direto para a configuração
   const primeiraVez = !state.config.data && state.convidados.length === 0 && state.itens.length === 0;
