@@ -20,12 +20,16 @@
     padrinhos: [],    // { id, padrinho, madrinha }
     fornecedores: [], // { id, nome, categoria, contato }
     presentes: [],    // { id, nome, valor (centavos), link, status: "falta"|"comprado"|"ganho" }
+    notas: [],        // { id, texto, cor, autor, fixada, criadoEm, editadoEm }
   });
 
   let state = carregar();
   let filtroConvidados = "todos";
   let filtroChecklist = "todos";
   let filtroPresentes = "todos";
+  let filtroNotaAutor = "todos";
+  let buscaNotas = "";
+  let notaEditando = "";
 
   /* ---------- persistência ---------- */
 
@@ -577,6 +581,8 @@
 
   /* ---------- presentes ---------- */
 
+  const CORES_NOTA = ["papel", "rosa", "sage", "dourado", "azul"];
+
   const ROTULO_STATUS = { falta: "Falta", comprado: "Comprado", ganho: "Ganho" };
   const PROXIMO_STATUS = { falta: "comprado", comprado: "ganho", ganho: "falta" };
 
@@ -663,6 +669,234 @@
     filtroPresentes = chip.dataset.filtro;
     $$("#presentes-filtros .chip").forEach((c) => c.classList.toggle("is-active", c === chip));
     renderPresentes();
+  });
+
+  /* ---------- bloco de anotações ---------- */
+
+  const iconeFixar =
+    '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6l-.7 5.2 3 2.6V14H6.7v-2.2l3-2.6z"/><path d="M12 14v6"/></svg>';
+  const iconeEditar =
+    '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z"/><path d="m14.5 7.5 2.9 2.9"/></svg>';
+  const iconeCompartilhar =
+    '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5.5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="18.5" r="2.6"/><path d="m8.4 10.7 7.2-3.9M8.4 13.3l7.2 3.9"/></svg>';
+
+  function tempoRelativo(iso) {
+    const d = new Date(iso);
+    if (isNaN(d)) return "";
+    const min = Math.floor(Math.max(0, Date.now() - d.getTime()) / 6e4);
+    if (min < 1) return "agora mesmo";
+    if (min < 60) return `há ${min} min`;
+    const horas = Math.floor(min / 60);
+    if (horas < 24) return `há ${horas} h`;
+    const dias = Math.floor(horas / 24);
+    if (dias === 1) return "ontem";
+    if (dias < 7) return `há ${dias} dias`;
+    return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+  }
+
+  // cor estável por autor, para o avatar da inicial
+  function corDoAutor(nome) {
+    const paleta = ["#7d9070", "#c98a80", "#b3892e", "#6e85a0", "#8a7ba8", "#a8735a"];
+    let h = 0;
+    for (let i = 0; i < nome.length; i++) h = (h * 31 + nome.charCodeAt(i)) >>> 0;
+    return paleta[h % paleta.length];
+  }
+
+  const autorAtual = () => usuarioLogado || "nós";
+
+  // destaca o termo buscado dentro do texto já escapado
+  function destacar(texto, termo) {
+    const seguro = escapeHtml(texto);
+    if (!termo) return seguro;
+    const escapado = escapeHtml(termo).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return seguro.replace(new RegExp(escapado, "gi"), (m) => `<mark>${m}</mark>`);
+  }
+
+  function notasOrdenadas() {
+    return [...state.notas].sort((a, b) => {
+      if (Boolean(a.fixada) !== Boolean(b.fixada)) return a.fixada ? -1 : 1;
+      return String(b.criadoEm || "").localeCompare(String(a.criadoEm || ""));
+    });
+  }
+
+  function renderFiltrosNotas() {
+    const autores = [...new Set(state.notas.map((n) => n.autor).filter(Boolean))];
+    const box = $("#notas-filtros");
+    box.hidden = autores.length < 2;
+    if (autores.length < 2) {
+      box.innerHTML = "";
+      filtroNotaAutor = "todos";
+      return;
+    }
+    if (filtroNotaAutor !== "todos" && !autores.includes(filtroNotaAutor)) filtroNotaAutor = "todos";
+    box.innerHTML =
+      `<button class="chip ${filtroNotaAutor === "todos" ? "is-active" : ""}" data-autor="todos">Todos</button>` +
+      autores
+        .map(
+          (a) =>
+            `<button class="chip ${filtroNotaAutor === a ? "is-active" : ""}" data-autor="${escapeAttr(a)}">${escapeHtml(a)}</button>`
+        )
+        .join("");
+  }
+
+  function htmlNota(n, opts = {}) {
+    const cor = CORES_NOTA.includes(n.cor) ? n.cor : "papel";
+    const autor = n.autor || "nós";
+    const editando = !opts.compacta && notaEditando === n.id;
+    const corpo = editando
+      ? `<div class="nota-edicao">
+          <textarea id="nota-edit-campo" maxlength="1000">${escapeHtml(n.texto)}</textarea>
+          <div class="nota-edicao-acoes">
+            <button type="button" class="btn-secondary" data-acao="cancelar">Cancelar</button>
+            <button type="button" class="btn-primary" data-acao="salvar">Salvar</button>
+          </div>
+        </div>`
+      : `<p class="nota-texto">${destacar(n.texto, opts.compacta ? "" : buscaNotas)}</p>`;
+    const acoes = opts.compacta
+      ? ""
+      : `<div class="nota-acoes">
+          <button class="nota-btn ${n.fixada ? "is-on" : ""}" data-acao="fixar" aria-label="${n.fixada ? "Desafixar" : "Fixar no topo"}" title="${n.fixada ? "Desafixar" : "Fixar no topo"}">${iconeFixar}</button>
+          <button class="nota-btn" data-acao="editar" aria-label="Editar" title="Editar">${iconeEditar}</button>
+          <button class="nota-btn" data-acao="compartilhar" aria-label="Compartilhar" title="Compartilhar">${iconeCompartilhar}</button>
+          <button class="nota-btn btn-apagar" data-acao="apagar" aria-label="Apagar" title="Apagar">${iconeLixeira}</button>
+        </div>`;
+    const rodape = `<div class="nota-rodape">
+        <span>${tempoRelativo(n.criadoEm)}</span>
+        ${n.editadoEm ? '<span class="nota-editado">· editada</span>' : ""}
+        ${n.fixada && !opts.compacta ? '<span class="nota-fixa-tag">fixada</span>' : ""}
+      </div>`;
+    return `<article class="nota n-${cor} ${n.fixada ? "fixada" : ""}" data-id="${n.id}">
+      <div class="nota-topo">
+        <span class="nota-autor">
+          <i class="nota-avatar" style="background:${corDoAutor(autor)}">${escapeHtml(autor[0].toUpperCase())}</i>
+          <span class="nota-nome">${escapeHtml(autor)}</span>
+        </span>
+        ${acoes}
+      </div>
+      ${corpo}
+      ${rodape}
+    </article>`;
+  }
+
+  function renderNotas() {
+    const todas = notasOrdenadas();
+    const termo = buscaNotas.trim().toLowerCase();
+    const filtradas = todas.filter((n) => {
+      if (filtroNotaAutor !== "todos" && n.autor !== filtroNotaAutor) return false;
+      if (termo && !String(n.texto).toLowerCase().includes(termo)) return false;
+      return true;
+    });
+
+    renderFiltrosNotas();
+    $("#lista-notas").innerHTML = filtradas.map((n) => htmlNota(n)).join("");
+
+    const vazioGeral = state.notas.length === 0;
+    const empty = $("#notas-empty");
+    empty.classList.toggle("is-visible", vazioGeral || filtradas.length === 0);
+    empty.textContent = vazioGeral
+      ? "Escreva a primeira anotação de vocês ✨"
+      : "Nenhuma anotação encontrada com esse filtro";
+
+    const n = state.notas.length;
+    const fixadas = state.notas.filter((x) => x.fixada).length;
+    $("#notas-resumo").textContent = n
+      ? `${n} ${n === 1 ? "anotação" : "anotações"}${fixadas ? ` · ${fixadas} fixada${fixadas === 1 ? "" : "s"}` : ""}`
+      : "Nenhuma anotação ainda";
+
+    // card do dashboard com a anotação mais recente
+    const card = $("#card-notas");
+    card.hidden = n === 0;
+    $("#resumo-notas-total").textContent = n ? `${n} no total` : "0";
+    if (n) $("#dash-nota-recente").innerHTML = htmlNota(todas[0], { compacta: true });
+  }
+
+  $("#form-nota").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const texto = $("#nota-texto").value.trim();
+    if (!texto) return;
+    const cor = document.querySelector('input[name="nota-cor"]:checked').value;
+    state.notas.push({
+      id: uid(),
+      texto,
+      cor,
+      autor: autorAtual(),
+      fixada: false,
+      criadoEm: new Date().toISOString(),
+      editadoEm: "",
+    });
+    salvar();
+    renderTudo();
+    $("#nota-texto").value = "";
+    $("#nota-texto").focus();
+    toast("Anotação salva 📝");
+  });
+
+  $("#notas-busca").addEventListener("input", (e) => {
+    buscaNotas = e.target.value;
+    renderNotas();
+  });
+
+  $("#notas-filtros").addEventListener("click", (e) => {
+    const chip = e.target.closest(".chip");
+    if (!chip) return;
+    filtroNotaAutor = chip.dataset.autor;
+    renderNotas();
+  });
+
+  $("#lista-notas").addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-acao]");
+    if (!btn) return;
+    const artigo = btn.closest("[data-id]");
+    const nota = state.notas.find((x) => x.id === artigo.dataset.id);
+    if (!nota) return;
+    const acao = btn.dataset.acao;
+
+    if (acao === "fixar") {
+      nota.fixada = !nota.fixada;
+      salvar();
+      renderTudo();
+      toast(nota.fixada ? "Fixada no topo 📌" : "Desafixada");
+    } else if (acao === "editar") {
+      notaEditando = nota.id;
+      renderNotas();
+      const campo = $("#nota-edit-campo");
+      if (campo) {
+        campo.focus();
+        campo.setSelectionRange(campo.value.length, campo.value.length);
+      }
+    } else if (acao === "cancelar") {
+      notaEditando = "";
+      renderNotas();
+    } else if (acao === "salvar") {
+      const campo = $("#nota-edit-campo");
+      const novo = campo ? campo.value.trim() : "";
+      if (!novo) {
+        toast("A anotação não pode ficar vazia");
+        return;
+      }
+      if (novo !== nota.texto) {
+        nota.texto = novo;
+        nota.editadoEm = new Date().toISOString();
+      }
+      notaEditando = "";
+      salvar();
+      renderTudo();
+      toast("Anotação atualizada ✅");
+    } else if (acao === "compartilhar") {
+      const mensagem = `📝 ${nota.texto}\n— ${nota.autor || "nós"} · Nosso Casamento`;
+      if (navigator.share) {
+        navigator.share({ text: mensagem }).catch(() => {});
+      } else {
+        window.open("https://wa.me/?text=" + encodeURIComponent(mensagem), "_blank", "noopener");
+      }
+    } else if (acao === "apagar") {
+      if (!confirm("Apagar esta anotação?")) return;
+      state.notas = state.notas.filter((x) => x.id !== nota.id);
+      if (notaEditando === nota.id) notaEditando = "";
+      salvar();
+      renderTudo();
+      toast("Anotação apagada");
+    }
   });
 
   /* ---------- configurações ---------- */
@@ -1099,6 +1333,7 @@
     renderPadrinhos();
     renderFornecedores();
     renderPresentes();
+    renderNotas();
     atualizarContagem();
   }
 

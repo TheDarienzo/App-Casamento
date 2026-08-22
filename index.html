@@ -179,6 +179,16 @@
           <span class="legend-item"><i class="dot dot-noivo"></i><span id="lado-b-label">Noivo</span>: <b id="resumo-lado-b">0</b></span>
         </div>
       </div>
+
+      <div class="card card-notas" id="card-notas" hidden>
+        <div class="card-head">
+          <h2>Anotações</h2>
+          <span class="card-head-value" id="resumo-notas-total">0</span>
+        </div>
+        <p class="dash-list-titulo">Última anotação</p>
+        <div id="dash-nota-recente"></div>
+      </div>
+
     </section>
 
     <!-- ============ CONVIDADOS ============ -->
@@ -335,6 +345,36 @@
       <p class="empty-state" id="presentes-empty">Adicione o primeiro presente acima ✨</p>
     </section>
 
+    <!-- ============ ANOTAÇÕES ============ -->
+    <section class="view" id="view-notas">
+      <div class="view-head">
+        <h2 class="view-title">Bloco de Anotações</h2>
+        <p class="view-sub" id="notas-resumo">Nenhuma anotação ainda</p>
+      </div>
+
+      <form class="form-card" id="form-nota">
+        <textarea id="nota-texto" placeholder="Escreva uma ideia, um recado, uma lembrança..." rows="3" maxlength="1000" required></textarea>
+        <div class="cores-row" role="radiogroup" aria-label="Cor da anotação">
+          <label class="cor-opcao"><input type="radio" name="nota-cor" value="papel" checked><span class="cor-bola cor-papel" title="Papel"></span></label>
+          <label class="cor-opcao"><input type="radio" name="nota-cor" value="rosa"><span class="cor-bola cor-rosa" title="Rosa-chá"></span></label>
+          <label class="cor-opcao"><input type="radio" name="nota-cor" value="sage"><span class="cor-bola cor-sage" title="Verde-oliva"></span></label>
+          <label class="cor-opcao"><input type="radio" name="nota-cor" value="dourado"><span class="cor-bola cor-dourado" title="Dourado"></span></label>
+          <label class="cor-opcao"><input type="radio" name="nota-cor" value="azul"><span class="cor-bola cor-azul" title="Azul sereno"></span></label>
+          <button type="submit" class="btn-primary btn-nota-add">Anotar</button>
+        </div>
+      </form>
+
+      <div class="busca-wrap">
+        <svg class="busca-icone" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="search" id="notas-busca" placeholder="Buscar nas anotações" autocomplete="off">
+      </div>
+
+      <div class="filter-row" id="notas-filtros"></div>
+
+      <div class="notas-mural" id="lista-notas"></div>
+      <p class="empty-state" id="notas-empty">Escreva a primeira anotação de vocês ✨</p>
+    </section>
+
     <!-- ============ CONFIGURAÇÕES ============ -->
     <section class="view" id="view-config">
       <div class="view-head">
@@ -429,6 +469,10 @@
     <button class="nav-item" data-view="fornecedores" aria-label="Fornecedores">
       <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h16l-1.2 12.2a1.8 1.8 0 0 1-1.8 1.6H7a1.8 1.8 0 0 1-1.8-1.6z"/><path d="M8.5 11V6.5a3.5 3.5 0 0 1 7 0V11"/></svg>
       <span>Fornec.</span>
+    </button>
+    <button class="nav-item" data-view="notas" aria-label="Anotações">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h9L19 8v12.5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-16a1 1 0 0 1 1-1z"/><path d="M14.5 3.6V8H19"/><path d="M8.5 12.5h7M8.5 16h4.5"/></svg>
+      <span>Notas</span>
     </button>
   </nav>
 

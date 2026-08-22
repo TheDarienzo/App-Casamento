@@ -971,7 +971,8 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
   border-top: 1px solid rgba(179, 137, 46, 0.25);
   display: flex;
   justify-content: space-around;
-  padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+  gap: 1px;
+  padding: 6px 2px calc(6px + env(safe-area-inset-bottom, 0px));
 }
 
 .nav-item {
@@ -982,15 +983,14 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
   flex-direction: column;
   align-items: center;
   gap: 3px;
-  font-size: 0.6rem;
+  font-size: 0.55rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
-  padding: 5px 4px;
+  letter-spacing: 0;
+  padding: 5px 1px;
   border-radius: 12px;
   transition: color 0.2s;
   flex: 1;
   min-width: 0;
-  max-width: 90px;
 }
 .nav-item span {
   max-width: 100%;
@@ -1004,4 +1004,198 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
 @media (min-width: 560px) {
   .stat-grid { grid-template-columns: repeat(4, 1fr); }
   .cd-unit { min-width: 84px; }
+}
+
+/* ---------- Bloco de anotações ---------- */
+
+#form-nota textarea {
+  width: 100%;
+  border: 1.5px solid var(--ivory-deep);
+  background: var(--ivory);
+  border-radius: 12px;
+  padding: 12px 13px;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  color: var(--ink);
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 76px;
+}
+#form-nota textarea:focus { outline: none; border-color: var(--gold-soft); }
+
+.cores-row { display: flex; align-items: center; gap: 8px; }
+.cor-opcao { position: relative; display: flex; cursor: pointer; }
+.cor-opcao input { position: absolute; opacity: 0; pointer-events: none; }
+.cor-bola {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: block;
+  border: 2px solid rgba(47, 58, 42, 0.12);
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+}
+.cor-opcao input:checked + .cor-bola {
+  border-color: var(--ink);
+  transform: scale(1.14);
+  box-shadow: 0 0 0 3px rgba(212, 180, 106, 0.35);
+}
+.cor-papel { background: #fffdf8; }
+.cor-rosa { background: #f6ddd7; }
+.cor-sage { background: #dfe7d6; }
+.cor-dourado { background: #f7eccd; }
+.cor-azul { background: #dee6ef; }
+.btn-nota-add { margin-left: auto; }
+
+.busca-wrap { position: relative; margin-bottom: 12px; }
+.busca-icone {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ink-faint);
+  pointer-events: none;
+}
+#notas-busca {
+  width: 100%;
+  border: 1.5px solid var(--ivory-deep);
+  background: var(--paper);
+  border-radius: 99px;
+  padding: 10px 14px 10px 38px;
+  font-size: 0.9rem;
+  appearance: none;
+}
+#notas-busca:focus { outline: none; border-color: var(--gold-soft); }
+#notas-busca::-webkit-search-cancel-button { -webkit-appearance: none; }
+
+.notas-mural { display: flex; flex-direction: column; gap: 12px; }
+
+.nota {
+  position: relative;
+  border-radius: var(--radius);
+  padding: 13px 15px 11px;
+  background: #fffdf8;
+  border: 1px solid rgba(179, 137, 46, 0.2);
+  box-shadow: 0 1px 4px rgba(47, 58, 42, 0.06), 0 8px 20px rgba(47, 58, 42, 0.04);
+  animation: itemIn 0.25s ease both;
+  overflow: hidden;
+}
+.nota.n-rosa { background: #f6ddd7; border-color: rgba(201, 138, 128, 0.45); }
+.nota.n-sage { background: #dfe7d6; border-color: rgba(125, 144, 112, 0.45); }
+.nota.n-dourado { background: #f7eccd; border-color: rgba(179, 137, 46, 0.4); }
+.nota.n-azul { background: #dee6ef; border-color: rgba(110, 133, 160, 0.4); }
+
+/* cantinho dobrado, dando cara de papel */
+.nota::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(135deg, transparent 50%, rgba(47, 58, 42, 0.09) 50%);
+  border-bottom-right-radius: var(--radius);
+}
+
+.nota.fixada { box-shadow: 0 0 0 2px var(--gold-soft), 0 8px 20px rgba(47, 58, 42, 0.07); }
+
+.nota-topo { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+
+.nota-autor { display: flex; align-items: center; gap: 7px; min-width: 0; flex: 1; }
+.nota-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--paper);
+  font-style: normal;
+}
+.nota-nome {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--ink-soft);
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nota-acoes { display: flex; gap: 1px; flex-shrink: 0; }
+.nota-btn {
+  background: none;
+  border: none;
+  color: var(--ink-faint);
+  padding: 6px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  transition: color 0.2s, background 0.2s;
+}
+.nota-btn:hover { background: rgba(255, 253, 248, 0.7); color: var(--ink); }
+.nota-btn.is-on { color: var(--gold); }
+.nota-btn.btn-apagar:hover { color: var(--danger); }
+
+.nota-texto {
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--ink);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.nota-texto mark {
+  background: rgba(212, 180, 106, 0.5);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.nota-rodape {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(47, 58, 42, 0.14);
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+}
+.nota-editado { font-style: italic; }
+.nota-fixa-tag {
+  margin-left: auto;
+  font-size: 0.63rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+}
+
+.nota-edicao textarea {
+  width: 100%;
+  border: 1.5px solid var(--gold-soft);
+  border-radius: 10px;
+  padding: 10px;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--ink);
+  background: rgba(255, 253, 248, 0.85);
+  resize: vertical;
+  min-height: 84px;
+}
+.nota-edicao textarea:focus { outline: none; }
+.nota-edicao-acoes { display: flex; gap: 8px; margin-top: 9px; }
+.nota-edicao-acoes button { flex: 1; padding: 8px 12px; font-size: 0.84rem; }
+
+/* card de anotações no dashboard */
+.card-notas .nota { margin: 0; box-shadow: none; }
+.card-notas .nota::after { display: none; }
+
+/* celulares mais estreitos: nomes da navegação ainda cabem inteiros */
+@media (max-width: 380px) {
+  .nav-item { font-size: 0.5rem; }
+  .nav-item svg { width: 20px; height: 20px; }
 }
