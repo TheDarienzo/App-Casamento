@@ -213,6 +213,11 @@
         </div>
       </form>
 
+      <div class="busca-wrap" id="busca-convidados-wrap" hidden>
+        <svg class="busca-icone" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="search" id="busca-convidados" placeholder="Buscar convidado" autocomplete="off">
+      </div>
+
       <div class="filter-row" id="convidados-filtros">
         <button class="chip is-active" data-filtro="todos">Todos</button>
         <button class="chip" data-filtro="noiva" id="chip-lado-a">Noiva</button>
@@ -248,6 +253,11 @@
         <div class="total-box total-pend"><span class="total-lbl">Pendente</span><span class="total-val" id="total-pendente">R$ 0,00</span></div>
       </div>
 
+      <div class="busca-wrap" id="busca-checklist-wrap" hidden>
+        <svg class="busca-icone" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="search" id="busca-checklist" placeholder="Buscar tarefa" autocomplete="off">
+      </div>
+
       <div class="filter-row" id="checklist-filtros">
         <button class="chip is-active" data-filtro="todos">Todos</button>
         <button class="chip" data-filtro="pendentes">Pendentes</button>
@@ -273,6 +283,11 @@
         </div>
         <button type="submit" class="btn-primary btn-block">Adicionar par</button>
       </form>
+
+      <div class="busca-wrap" id="busca-padrinhos-wrap" hidden>
+        <svg class="busca-icone" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="search" id="busca-padrinhos" placeholder="Buscar padrinho ou madrinha" autocomplete="off">
+      </div>
 
       <ul class="pair-list" id="lista-padrinhos"></ul>
       <p class="empty-state" id="padrinhos-empty">Adicione o primeiro par acima ✨</p>
@@ -305,6 +320,11 @@
         <button type="submit" class="btn-primary btn-block">Adicionar fornecedor</button>
       </form>
 
+      <div class="busca-wrap" id="busca-fornecedores-wrap" hidden>
+        <svg class="busca-icone" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="search" id="busca-fornecedores" placeholder="Buscar fornecedor" autocomplete="off">
+      </div>
+
       <ul class="item-list" id="lista-fornecedores"></ul>
       <p class="empty-state" id="fornecedores-empty">Cadastre o primeiro fornecedor acima ✨</p>
     </section>
@@ -332,6 +352,11 @@
         <div class="total-box"><span class="total-lbl">Total</span><span class="total-val" id="presentes-total">0</span></div>
         <div class="total-box total-ok"><span class="total-lbl">Já temos</span><span class="total-val" id="presentes-temos">0</span></div>
         <div class="total-box total-pend"><span class="total-lbl">Faltam</span><span class="total-val" id="presentes-faltam">0</span></div>
+      </div>
+
+      <div class="busca-wrap" id="busca-presentes-wrap" hidden>
+        <svg class="busca-icone" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="search" id="busca-presentes" placeholder="Buscar presente" autocomplete="off">
       </div>
 
       <div class="filter-row" id="presentes-filtros">

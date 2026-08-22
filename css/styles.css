@@ -1055,7 +1055,7 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
   color: var(--ink-faint);
   pointer-events: none;
 }
-#notas-busca {
+.busca-wrap input {
   width: 100%;
   border: 1.5px solid var(--ivory-deep);
   background: var(--paper);
@@ -1063,9 +1063,12 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
   padding: 10px 14px 10px 38px;
   font-size: 0.9rem;
   appearance: none;
+  -webkit-appearance: none;
+  color: var(--ink);
+  font-family: var(--font-body);
 }
-#notas-busca:focus { outline: none; border-color: var(--gold-soft); }
-#notas-busca::-webkit-search-cancel-button { -webkit-appearance: none; }
+.busca-wrap input:focus { outline: none; border-color: var(--gold-soft); }
+.busca-wrap input::-webkit-search-cancel-button { -webkit-appearance: none; }
 
 .notas-mural { display: flex; flex-direction: column; gap: 12px; }
 

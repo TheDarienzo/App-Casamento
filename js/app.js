@@ -32,6 +32,7 @@
   let notaEditando = "";
   let membrosCasal = [];
   let editandoId = "";  // item aberto para edição (qualquer lista)
+  const busca = { convidados: "", checklist: "", padrinhos: "", presentes: "", fornecedores: "" };
 
   /* ---------- persistência ---------- */
 
@@ -85,6 +86,19 @@
 
   const escapeAttr = (texto) => escapeHtml(texto).replace(/"/g, "&quot;");
 
+  // tira acentos mantendo o mesmo número de letras, para buscar "fotografo"
+  // e encontrar "Fotógrafo" (e o destaque continuar alinhado com o texto)
+  function semAcentos(texto) {
+    return Array.from(String(texto))
+      .map((ch) => {
+        const simples = ch.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        return simples.length === 1 ? simples : ch;
+      })
+      .join("");
+  }
+
+  const normalizar = (texto) => semAcentos(texto).toLowerCase();
+
   function normalizarLink(link) {
     const l = String(link || "").trim();
     if (!l) return "";
@@ -136,6 +150,49 @@
   }
 
   const valorParaCampo = (centavos) => (centavos ? (centavos / 100).toFixed(2).replace(".", ",") : "");
+
+  // texto digitado na busca de uma seção, em minúsculas e sem espaços nas pontas
+  const termoDe = (secao) => normalizar(busca[secao].trim());
+
+  const combina = (termo, ...campos) =>
+    !termo || campos.some((c) => normalizar(c || "").includes(termo));
+
+  // mostra a busca só quando há algo para procurar
+  function ajustarBusca(secao, total) {
+    $(`#busca-${secao}-wrap`).hidden = total === 0;
+  }
+
+  // mensagem de lista vazia: sem nada cadastrado x nada encontrado
+  function ajustarVazio(secao, total, visiveis, textoInicial) {
+    const el = $(`#${secao}-empty`);
+    el.classList.toggle("is-visible", total === 0 || visiveis === 0);
+    el.textContent = total === 0 ? textoInicial : "Nada encontrado com essa busca";
+  }
+
+  $("#busca-convidados").addEventListener("input", (e) => {
+    busca.convidados = e.target.value;
+    renderConvidados();
+  });
+
+  $("#busca-checklist").addEventListener("input", (e) => {
+    busca.checklist = e.target.value;
+    renderChecklist();
+  });
+
+  $("#busca-padrinhos").addEventListener("input", (e) => {
+    busca.padrinhos = e.target.value;
+    renderPadrinhos();
+  });
+
+  $("#busca-presentes").addEventListener("input", (e) => {
+    busca.presentes = e.target.value;
+    renderPresentes();
+  });
+
+  $("#busca-fornecedores").addEventListener("input", (e) => {
+    busca.fornecedores = e.target.value;
+    renderFornecedores();
+  });
 
   /* ---------- navegação ---------- */
 
@@ -350,11 +407,12 @@
     const lista = $("#lista-convidados");
     const conv = state.convidados;
 
+    const termo = termoDe("convidados");
     const filtrados = conv.filter((c) => {
-      if (filtroConvidados === "noiva") return c.lado === "noiva";
-      if (filtroConvidados === "noivo") return c.lado === "noivo";
-      if (filtroConvidados === "confirmados") return c.confirmado;
-      return true;
+      if (filtroConvidados === "noiva" && c.lado !== "noiva") return false;
+      if (filtroConvidados === "noivo" && c.lado !== "noivo") return false;
+      if (filtroConvidados === "confirmados" && !c.confirmado) return false;
+      return combina(termo, c.nome);
     });
 
     lista.innerHTML = filtrados
@@ -385,7 +443,7 @@
         return `<li class="list-item ${c.confirmado ? "is-done" : ""}" data-id="${c.id}">
           <button class="check-toggle ${c.confirmado ? "is-on" : ""}" data-acao="confirmar" aria-label="Confirmar presença" title="Confirmar presença">${iconeCheck}</button>
           <div class="item-main">
-            <div class="item-title">${escapeHtml(c.nome)}</div>
+            <div class="item-title">${destacar(c.nome, termo)}</div>
             <div class="item-meta">${badge}<span>${pessoas} pessoa${pessoas === 1 ? "" : "s"}${c.acompanhantes ? ` (+${c.acompanhantes} acomp.)` : ""}</span></div>
           </div>
           ${btnEditar("convidado")}
@@ -394,7 +452,8 @@
       })
       .join("");
 
-    $("#convidados-empty").classList.toggle("is-visible", conv.length === 0);
+    ajustarBusca("convidados", conv.length);
+    ajustarVazio("convidados", conv.length, filtrados.length, "Adicione o primeiro convidado acima ✨");
 
     const total = conv.reduce((s, c) => s + totalPessoas(c), 0);
     const confirmados = conv.filter((c) => c.confirmado).reduce((s, c) => s + totalPessoas(c), 0);
@@ -474,10 +533,11 @@
     const lista = $("#lista-itens");
     const itens = state.itens;
 
+    const termo = termoDe("checklist");
     const filtrados = itens.filter((i) => {
-      if (filtroChecklist === "pendentes") return !i.resolvido;
-      if (filtroChecklist === "resolvidos") return i.resolvido;
-      return true;
+      if (filtroChecklist === "pendentes" && i.resolvido) return false;
+      if (filtroChecklist === "resolvidos" && !i.resolvido) return false;
+      return combina(termo, i.descricao);
     });
 
     lista.innerHTML = filtrados
@@ -497,7 +557,7 @@
         return `<li class="list-item ${i.resolvido ? "is-done" : ""}" data-id="${i.id}">
           <button class="check-toggle ${i.resolvido ? "is-on" : ""}" data-acao="resolver" aria-label="Marcar como resolvido" title="Marcar como resolvido">${iconeCheck}</button>
           <div class="item-main">
-            <div class="item-title">${escapeHtml(i.descricao)}</div>
+            <div class="item-title">${destacar(i.descricao, termo)}</div>
           </div>
           ${i.valor ? `<span class="item-valor">${brl(i.valor)}</span>` : ""}
           ${btnEditar("tarefa")}
@@ -506,7 +566,8 @@
       })
       .join("");
 
-    $("#checklist-empty").classList.toggle("is-visible", itens.length === 0);
+    ajustarBusca("checklist", itens.length);
+    ajustarVazio("checklist", itens.length, filtrados.length, "Cadastre a primeira tarefa acima ✨");
 
     const valorTotal = itens.reduce((s, i) => s + (i.valor || 0), 0);
     const valorResolvido = itens.filter((i) => i.resolvido).reduce((s, i) => s + (i.valor || 0), 0);
@@ -587,8 +648,13 @@
 
   function renderPadrinhos() {
     const lista = $("#lista-padrinhos");
-    lista.innerHTML = state.padrinhos
-      .map((p, idx) => {
+    const termo = termoDe("padrinhos");
+    // guarda o número original do par para a numeração não mudar na busca
+    const filtrados = state.padrinhos
+      .map((p, idx) => ({ p, idx }))
+      .filter(({ p }) => combina(termo, p.padrinho, p.madrinha));
+    lista.innerHTML = filtrados
+      .map(({ p, idx }) => {
         if (editandoId === p.id) {
           return `<li class="pair-item is-editing" data-id="${p.id}">
             <div class="edit-form">
@@ -604,9 +670,9 @@
         return `<li class="pair-item" data-id="${p.id}">
           <span class="pair-num">${idx + 1}</span>
           <div class="pair-names">
-            <span class="nome">${escapeHtml(p.padrinho)}</span>
+            <span class="nome">${destacar(p.padrinho, termo)}</span>
             <span class="amp">&amp;</span>
-            <span class="nome">${escapeHtml(p.madrinha)}</span>
+            <span class="nome">${destacar(p.madrinha, termo)}</span>
           </div>
           ${btnEditar("par")}
           <button class="btn-remove" data-acao="remover" aria-label="Remover par">${iconeLixeira}</button>
@@ -614,7 +680,8 @@
       })
       .join("");
 
-    $("#padrinhos-empty").classList.toggle("is-visible", state.padrinhos.length === 0);
+    ajustarBusca("padrinhos", state.padrinhos.length);
+    ajustarVazio("padrinhos", state.padrinhos.length, filtrados.length, "Adicione o primeiro par acima ✨");
 
     const n = state.padrinhos.length;
     $("#padrinhos-resumo").textContent = n
@@ -677,7 +744,9 @@
 
   function renderFornecedores() {
     const lista = $("#lista-fornecedores");
-    lista.innerHTML = state.fornecedores
+    const termo = termoDe("fornecedores");
+    const filtrados = state.fornecedores.filter((f) => combina(termo, f.nome, f.categoria, f.contato));
+    lista.innerHTML = filtrados
       .map((f) => {
         if (editandoId === f.id) {
           const opcoes = CATEGORIAS_FORNECEDOR.map(
@@ -700,7 +769,7 @@
           : "";
         return `<li class="list-item" data-id="${f.id}">
           <div class="item-main">
-            <div class="item-title">${escapeHtml(f.nome)}</div>
+            <div class="item-title">${destacar(f.nome, termo)}</div>
             <div class="item-meta"><span class="badge badge-cat">${escapeHtml(f.categoria)}</span>${linkContato}</div>
           </div>
           ${btnEditar("fornecedor")}
@@ -709,7 +778,8 @@
       })
       .join("");
 
-    $("#fornecedores-empty").classList.toggle("is-visible", state.fornecedores.length === 0);
+    ajustarBusca("fornecedores", state.fornecedores.length);
+    ajustarVazio("fornecedores", state.fornecedores.length, filtrados.length, "Cadastre o primeiro fornecedor acima ✨");
 
     const n = state.fornecedores.length;
     $("#fornecedores-resumo").textContent = n
@@ -783,11 +853,12 @@
     const lista = $("#lista-presentes");
     const presentes = state.presentes;
 
+    const termo = termoDe("presentes");
     const filtrados = presentes.filter((p) => {
-      if (filtroPresentes === "faltam") return p.status === "falta";
-      if (filtroPresentes === "comprado") return p.status === "comprado";
-      if (filtroPresentes === "ganho") return p.status === "ganho";
-      return true;
+      if (filtroPresentes === "faltam" && p.status !== "falta") return false;
+      if (filtroPresentes === "comprado" && p.status !== "comprado") return false;
+      if (filtroPresentes === "ganho" && p.status !== "ganho") return false;
+      return combina(termo, p.nome);
     });
 
     lista.innerHTML = filtrados
@@ -814,7 +885,7 @@
         return `<li class="list-item ${pego ? "pego" : ""}" data-id="${p.id}">
           <button class="present-status st-${p.status}" data-acao="status" aria-label="Mudar situação" title="Toque para mudar">${ROTULO_STATUS[p.status]}</button>
           <div class="item-main">
-            <div class="item-title">${escapeHtml(p.nome)}</div>
+            <div class="item-title">${destacar(p.nome, termo)}</div>
             ${meta}
           </div>
           ${btnEditar("presente")}
@@ -823,7 +894,8 @@
       })
       .join("");
 
-    $("#presentes-empty").classList.toggle("is-visible", presentes.length === 0);
+    ajustarBusca("presentes", presentes.length);
+    ajustarVazio("presentes", presentes.length, filtrados.length, "Adicione o primeiro presente acima ✨");
 
     const temos = presentes.filter((p) => p.status !== "falta").length;
     $("#presentes-total").textContent = presentes.length;
@@ -937,12 +1009,23 @@
 
   const autorAtual = () => usuarioLogado || "nós";
 
-  // destaca o termo buscado dentro do texto já escapado
+  // marca no texto original os trechos que casam com o termo (sem acentos)
   function destacar(texto, termo) {
-    const seguro = escapeHtml(texto);
-    if (!termo) return seguro;
-    const escapado = escapeHtml(termo).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    return seguro.replace(new RegExp(escapado, "gi"), (m) => `<mark>${m}</mark>`);
+    const original = String(texto ?? "");
+    const alvo = normalizar(termo || "").trim();
+    if (!alvo) return escapeHtml(original);
+    const base = normalizar(original);
+    let saida = "";
+    let de = 0;
+    let achou = base.indexOf(alvo, de);
+    while (achou !== -1) {
+      saida +=
+        escapeHtml(original.slice(de, achou)) +
+        `<mark>${escapeHtml(original.slice(achou, achou + alvo.length))}</mark>`;
+      de = achou + alvo.length;
+      achou = base.indexOf(alvo, de);
+    }
+    return saida + escapeHtml(original.slice(de));
   }
 
   function notasOrdenadas() {
@@ -1013,10 +1096,10 @@
 
   function renderNotas() {
     const todas = notasOrdenadas();
-    const termo = buscaNotas.trim().toLowerCase();
+    const termo = normalizar(buscaNotas.trim());
     const filtradas = todas.filter((n) => {
       if (filtroNotaAutor !== "todos" && n.autor !== filtroNotaAutor) return false;
-      if (termo && !String(n.texto).toLowerCase().includes(termo)) return false;
+      if (termo && !normalizar(n.texto).includes(termo)) return false;
       return true;
     });
 
