@@ -26,12 +26,13 @@ Cloudflare Pages (grátis):
    existir, o app se atualiza sozinho na hora. Em **Configurações → Versão
    do app** dá para conferir qual está rodando e forçar a busca.
 
-## Sincronizar os dois celulares
+## Os dois celulares vendo as mesmas listas
 
-No app: **Configurações → Ativar sincronização**. Copie o código do casal e
-mande para o outro celular; lá: **Configurações → colar o código →
-Conectar**. Os dados ficam na nuvem (Supabase) e os dois veem as mesmas
-listas.
+Cada pessoa tem seu login. Para compartilharem o mesmo casamento, o par
+deve **criar a conta colando o código do casal** (que aparece em
+**Configurações → Conta**). Se as contas acabarem separadas, use
+**Configurações → Conta → "Juntar minha conta à do meu par"**: as listas
+dos dois são somadas, sem perder nada.
 
 ## Onde está cada coisa
 
