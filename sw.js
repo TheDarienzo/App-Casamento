@@ -1,7 +1,10 @@
 /* Service worker — Nosso Casamento
-   Estratégia: cache-first para o app shell, com atualização em segundo plano. */
+   Estratégia: o "corpo" do app (página, estilos, script) vem SEMPRE da rede
+   quando há internet, para abrir já na versão mais nova. O cache fica como
+   reserva para funcionar offline. Ícones e fontes seguem vindo do cache. */
 
-const CACHE = "nosso-casamento-v14";
+const VERSAO = "16";
+const CACHE = "nosso-casamento-v" + VERSAO;
 
 const SHELL = [
   "./",
@@ -34,6 +37,52 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// página, estilos e script: precisam estar sempre atualizados
+const ehCorpoDoApp = (url) =>
+  url.pathname === "/" ||
+  url.pathname.endsWith("/") ||
+  /\/(index\.html|manifest\.webmanifest)$/.test(url.pathname) ||
+  /\.(css|js)$/.test(url.pathname);
+
+async function daRede(request) {
+  try {
+    return await fetch(request, { cache: "no-store" });
+  } catch {
+    // alguns navegadores recusam a opção acima em certos pedidos
+    return await fetch(request);
+  }
+}
+
+async function redePrimeiro(request) {
+  try {
+    const resposta = await daRede(request);
+    if (resposta && resposta.ok) {
+      const copia = resposta.clone();
+      caches.open(CACHE).then((cache) => cache.put(request, copia));
+    }
+    return resposta;
+  } catch {
+    const guardado = await caches.match(request);
+    if (guardado) return guardado;
+    if (request.mode === "navigate") {
+      const inicio = await caches.match("./index.html");
+      if (inicio) return inicio;
+    }
+    throw new Error("sem internet e sem cópia guardada");
+  }
+}
+
+async function cachePrimeiro(request) {
+  const guardado = await caches.match(request);
+  if (guardado) return guardado;
+  const resposta = await fetch(request);
+  if (resposta && resposta.ok) {
+    const copia = resposta.clone();
+    caches.open(CACHE).then((cache) => cache.put(request, copia));
+  }
+  return resposta;
+}
+
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
@@ -45,35 +94,11 @@ self.addEventListener("fetch", (event) => {
 
   // fontes do Google: cache-first com preenchimento dinâmico
   if (url.hostname === "fonts.googleapis.com" || url.hostname === "fonts.gstatic.com") {
-    event.respondWith(
-      caches.match(request).then(
-        (hit) =>
-          hit ||
-          fetch(request).then((resp) => {
-            const clone = resp.clone();
-            caches.open(CACHE).then((cache) => cache.put(request, clone));
-            return resp;
-          })
-      )
-    );
+    event.respondWith(cachePrimeiro(request));
     return;
   }
 
   if (url.origin !== self.location.origin) return;
 
-  // app shell: cache-first, atualizando o cache em segundo plano
-  event.respondWith(
-    caches.match(request).then((hit) => {
-      const rede = fetch(request)
-        .then((resp) => {
-          if (resp && resp.ok) {
-            const clone = resp.clone();
-            caches.open(CACHE).then((cache) => cache.put(request, clone));
-          }
-          return resp;
-        })
-        .catch(() => hit);
-      return hit || rede;
-    })
-  );
+  event.respondWith(ehCorpoDoApp(url) ? redePrimeiro(request) : cachePrimeiro(request));
 });

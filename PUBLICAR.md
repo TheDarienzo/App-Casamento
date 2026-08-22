@@ -16,6 +16,16 @@ Cloudflare Pages (grátis):
    Instalar app** — pronto, é um aplicativo com ícone, tela cheia e
    funciona offline.
 
+
+## Publicando uma atualização
+
+1. Rode `node scripts/subir-versao.mjs` (sobe o número da versão em
+   `sw.js` e `js/app.js` — é o que faz os celulares perceberem a novidade).
+2. Reenvie os arquivos no Cloudflare (**New deployment → Upload assets**).
+3. Pronto: **ao abrir o app**, cada celular já busca a versão nova. Se ela
+   existir, o app se atualiza sozinho na hora. Em **Configurações → Versão
+   do app** dá para conferir qual está rodando e forçar a busca.
+
 ## Sincronizar os dois celulares
 
 No app: **Configurações → Ativar sincronização**. Copie o código do casal e

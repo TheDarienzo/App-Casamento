@@ -6,6 +6,7 @@
 (() => {
   "use strict";
 
+  const VERSAO_APP = "16";
   const STORAGE_KEY = "nosso-casamento-v1";
   const CASAL_KEY = "nosso-casamento-casal";
 
@@ -1731,11 +1732,57 @@
   const primeiraVez = !state.config.data && state.convidados.length === 0 && state.itens.length === 0;
   if (primeiraVez) irPara("config");
 
-  /* ---------- service worker ---------- */
+  /* ---------- service worker e atualização automática ---------- */
+
+  $("#app-versao").textContent = "v" + VERSAO_APP;
+
+  let registroSW = null;
 
   if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("sw.js").catch(() => {});
+    // se já havia uma versão instalada, uma troca de controle significa
+    // que chegou versão nova: recarrega para o app abrir atualizado
+    const jaTinhaVersao = Boolean(navigator.serviceWorker.controller);
+    let recarregando = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!jaTinhaVersao || recarregando) return;
+      recarregando = true;
+      location.reload();
+    });
+
+    window.addEventListener("load", async () => {
+      try {
+        // updateViaCache "none" garante que o próprio sw.js venha da rede
+        registroSW = await navigator.serviceWorker.register("sw.js", { updateViaCache: "none" });
+        registroSW.update();
+        // procura de novo sempre que o app volta para a frente
+        document.addEventListener("visibilitychange", () => {
+          if (document.visibilityState === "visible" && registroSW) registroSW.update();
+        });
+        setInterval(() => registroSW && registroSW.update(), 30 * 60 * 1000);
+      } catch {}
     });
   }
+
+  $("#btn-atualizar").addEventListener("click", async () => {
+    const btn = $("#btn-atualizar");
+    if (!registroSW) {
+      location.reload();
+      return;
+    }
+    btn.disabled = true;
+    toast("Procurando atualização…");
+    try {
+      await registroSW.update();
+      setTimeout(() => {
+        // se nada novo apareceu, é porque já está na última versão
+        if (!registroSW.installing && !registroSW.waiting) {
+          toast(`Você já está na versão mais recente (v${VERSAO_APP}) ✅`);
+        }
+        btn.disabled = false;
+      }, 1500);
+    } catch {
+      toast("Não foi possível verificar agora");
+      btn.disabled = false;
+    }
+  });
 })();
