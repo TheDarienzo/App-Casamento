@@ -3,7 +3,7 @@
    quando há internet, para abrir já na versão mais nova. O cache fica como
    reserva para funcionar offline. Ícones e fontes seguem vindo do cache. */
 
-const VERSAO = "17";
+const VERSAO = "18";
 const CACHE = "nosso-casamento-v" + VERSAO;
 
 const SHELL = [
@@ -16,6 +16,13 @@ const SHELL = [
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/icon-maskable-512.png",
+  "./img/papel.svg",
+  "./img/aquarela-fundo.svg",
+  "./img/mancha.svg",
+  "./img/mancha-verde.svg",
+  "./img/lavagem.svg",
+  "./img/ramo.svg",
+  "./img/traco.svg",
 ];
 
 self.addEventListener("install", (event) => {

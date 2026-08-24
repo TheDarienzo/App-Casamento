@@ -24,6 +24,18 @@
   --nav-h: 64px;
   --font-display: "Fraunces", Georgia, "Times New Roman", serif;
   --font-body: "Karla", "Segoe UI", Tahoma, sans-serif;
+  --font-mao: "Parisienne", "Fraunces", cursive;
+
+  /* aquarela: contorno de pigmento e sombra de papel sobre papel */
+  --tinta-borda: rgba(125, 144, 112, 0.30);
+  --tinta-borda-forte: rgba(125, 144, 112, 0.5);
+  --papel: rgba(255, 253, 248, 0.88);
+  --sombra-papel: 0 1px 2px rgba(94, 84, 62, 0.06), 0 14px 26px -16px rgba(88, 100, 70, 0.45);
+  /* recorte irregular, como papel cortado à mão */
+  --corte: 22px 26px 20px 24px / 24px 20px 26px 22px;
+  --corte-mini: 14px 17px 13px 16px / 16px 13px 17px 14px;
+  /* mancha de tinta usada como moldura: o cartão vira um pedaço de papel pintado */
+  --mancha: url("../img/mancha.svg") 34 fill / 24px stretch;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -33,11 +45,13 @@ html { -webkit-text-size-adjust: 100%; }
 body {
   font-family: var(--font-body);
   color: var(--ink);
-  background-color: var(--ivory);
-  background-image:
-    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(212, 180, 106, 0.18), transparent 60%),
-    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(201, 138, 128, 0.10), transparent 55%),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  /* papel de algodão: fibra por cima, poças de tinta por baixo */
+  background-color: #f6f1e6;
+  background-image: url("../img/papel.svg"), url("../img/aquarela-fundo.svg");
+  background-repeat: repeat, no-repeat;
+  background-size: 260px 260px, 100% auto;
+  background-position: top left, top center;
+  background-attachment: scroll, fixed;
   min-height: 100vh;
   min-height: 100dvh;
   padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
@@ -53,10 +67,14 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
   position: sticky;
   top: 0;
   z-index: 20;
-  background: rgba(247, 242, 233, 0.88);
+  /* traço de pincel no lugar da linha reta */
+  background:
+    url("../img/traco.svg") bottom center / 100% 14px no-repeat,
+    rgba(246, 241, 230, 0.9);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(179, 137, 46, 0.25);
+  border-bottom: none;
+  box-shadow: 0 8px 16px -14px rgba(88, 100, 70, 0.6);
   padding-top: env(safe-area-inset-top, 0px);
 }
 
@@ -120,9 +138,10 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
 .header-names { flex: 1; min-width: 0; }
 
 .header-names h1 {
-  font-family: var(--font-display);
-  font-weight: 550;
-  font-size: 1.25rem;
+  font-family: var(--font-mao);
+  font-weight: 400;
+  font-size: 1.6rem;
+  line-height: 1.1;
   letter-spacing: 0.01em;
   white-space: nowrap;
   overflow: hidden;
@@ -164,6 +183,23 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
   to { opacity: 1; transform: none; }
 }
 
+/* o painel aparece como tinta secando: um pedaço de cada vez */
+@keyframes pincelada {
+  from { opacity: 0; transform: translateY(14px) rotate(-0.8deg); filter: blur(3px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+#view-dashboard > * { animation: pincelada 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
+#view-dashboard > *:nth-child(1) { animation-delay: 0.02s; }
+#view-dashboard > *:nth-child(2) { animation-delay: 0.10s; }
+#view-dashboard > *:nth-child(3) { animation-delay: 0.18s; }
+#view-dashboard > *:nth-child(4) { animation-delay: 0.26s; }
+#view-dashboard > *:nth-child(5) { animation-delay: 0.34s; }
+#view-dashboard > *:nth-child(n+6) { animation-delay: 0.42s; }
+
+@media (prefers-reduced-motion: reduce) {
+  #view-dashboard > * { animation: none; }
+}
+
 .view-head { margin-bottom: 16px; }
 
 .view-title {
@@ -178,38 +214,39 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
 /* ---------- Countdown ---------- */
 
 .countdown-card {
-  background:
-    radial-gradient(ellipse 120% 90% at 50% -20%, rgba(212, 180, 106, 0.35), transparent 55%),
-    linear-gradient(150deg, #33402c 0%, #24301f 100%);
   color: var(--ivory);
-  border-radius: 24px;
-  padding: 26px 20px 20px;
+  background: transparent;
+  border: 30px solid transparent;
+  border-image: url("../img/mancha-verde.svg") 34 fill / 30px stretch;
+  border-radius: 0;
+  padding: 0;
   text-align: center;
-  box-shadow: var(--shadow);
-  border: 1px solid rgba(212, 180, 106, 0.4);
-  margin-bottom: 18px;
+  filter: drop-shadow(0 14px 18px rgba(35, 48, 30, 0.30));
+  margin-bottom: 10px;
   position: relative;
-  overflow: hidden;
 }
 
-.countdown-card::before,
+/* ramo de eucalipto pintado, saindo do canto */
 .countdown-card::after {
   content: "";
   position: absolute;
-  width: 120px;
-  height: 120px;
-  border: 1px solid rgba(212, 180, 106, 0.25);
-  border-radius: 50%;
+  right: -16px;
+  bottom: -18px;
+  width: 190px;
+  height: 70px;
+  background: url("../img/ramo.svg") center / contain no-repeat;
+  opacity: 0.5;
+  transform: rotate(-9deg);
+  pointer-events: none;
 }
-.countdown-card::before { top: -60px; left: -40px; }
-.countdown-card::after { bottom: -70px; right: -30px; width: 160px; height: 160px; }
 
 .countdown-label {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: 1rem;
+  font-family: var(--font-mao);
+  font-style: normal;
+  font-size: 1.7rem;
+  line-height: 1;
   color: var(--gold-soft);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.01em;
 }
 
 .countdown-grid {
@@ -221,9 +258,9 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
 
 .cd-unit {
   min-width: 64px;
-  background: rgba(255, 253, 248, 0.07);
-  border: 1px solid rgba(212, 180, 106, 0.25);
-  border-radius: 14px;
+  background: rgba(255, 253, 248, 0.08);
+  border: 1px solid rgba(212, 180, 106, 0.28);
+  border-radius: var(--corte-mini);
   padding: 10px 6px 8px;
   display: flex;
   flex-direction: column;
@@ -263,18 +300,35 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
 }
 
 .stat-card {
-  background: var(--paper);
-  border: 1px solid rgba(179, 137, 46, 0.18);
-  border-radius: var(--radius);
-  padding: 14px 16px;
+  position: relative;
+  background: transparent;
+  border: 24px solid transparent;
+  border-image: var(--mancha);
+  border-radius: 0;
+  padding: 0;
   text-align: left;
-  box-shadow: var(--shadow);
+  filter: drop-shadow(0 10px 12px rgba(88, 100, 70, 0.16));
   display: flex;
   flex-direction: column;
   gap: 1px;
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition: transform 0.18s;
 }
-.stat-card:active { transform: scale(0.97); }
+/* poça de pigmento que escorre do canto, como tinta secando no papel */
+.stat-card::before {
+  content: "";
+  position: absolute;
+  inset: 34% 12px 8px 12px;
+  background: radial-gradient(ellipse at 26% 120%, rgba(125, 144, 112, 0.34), transparent 58%);
+  filter: blur(11px);
+  pointer-events: none;
+}
+.stat-card > * { position: relative; }
+.stat-card:nth-child(2n)::before {
+  background: radial-gradient(ellipse at 74% 120%, rgba(196, 148, 138, 0.36), transparent 58%);
+}
+.stat-card:nth-child(3n+1) { transform: rotate(-0.35deg); }
+.stat-card:nth-child(3n+2) { transform: rotate(0.3deg); }
+.stat-card:active { transform: scale(0.97) rotate(-0.4deg); }
 .stat-wide { grid-column: span 2; }
 
 .stat-num {
@@ -298,12 +352,26 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
 /* ---------- Cards ---------- */
 
 .card {
-  background: var(--paper);
-  border: 1px solid rgba(179, 137, 46, 0.18);
-  border-radius: var(--radius);
-  padding: 16px 18px;
-  box-shadow: var(--shadow);
-  margin-bottom: 16px;
+  position: relative;
+  background: transparent;
+  border: 26px solid transparent;
+  border-image: var(--mancha);
+  border-radius: 0;
+  padding: 0;
+  filter: drop-shadow(0 12px 14px rgba(88, 100, 70, 0.15));
+  margin-bottom: 6px;
+}
+/* respingo pálido no topo, como aguada aplicada antes do texto */
+.card::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: 8%;
+  right: 24%;
+  height: 54px;
+  background: radial-gradient(ellipse at 46% 130%, rgba(196, 148, 138, 0.26), transparent 60%);
+  filter: blur(10px);
+  pointer-events: none;
 }
 
 .card-head {
@@ -318,6 +386,18 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
   font-family: var(--font-display);
   font-weight: 550;
   font-size: 1.15rem;
+  position: relative;
+}
+/* sublinhado de pincel: mais grosso no começo, some no fim */
+.card-head h2::after {
+  content: "";
+  position: absolute;
+  left: -2px;
+  right: -6px;
+  bottom: -4px;
+  height: 5px;
+  border-radius: 50% 40% 60% 45% / 100% 100% 100% 100%;
+  background: linear-gradient(90deg, rgba(179, 137, 46, 0.38), rgba(179, 137, 46, 0.16) 55%, transparent);
 }
 
 .card-head-value {
@@ -330,19 +410,24 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
 .card-text { font-size: 0.88rem; color: var(--ink-soft); margin-bottom: 12px; }
 
 .progress-track {
-  height: 10px;
-  border-radius: 99px;
-  background: var(--ivory-deep);
+  height: 13px;
+  border-radius: 8px 10px 9px 11px / 10px 8px 11px 9px;
+  background: rgba(125, 144, 112, 0.13);
+  box-shadow: inset 0 1px 2px rgba(94, 84, 62, 0.07);
   overflow: hidden;
   margin-bottom: 10px;
 }
 
+/* pincelada: a tinta acumula na ponta e clareia no meio do traço */
 .progress-fill {
   height: 100%;
   width: 0%;
-  border-radius: 99px;
-  background: linear-gradient(90deg, var(--sage) 0%, var(--gold-soft) 100%);
-  transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  border-radius: 8px 12px 10px 9px / 10px 9px 12px 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28), transparent 45%, rgba(60, 72, 48, 0.16)),
+    linear-gradient(90deg, #7d9070 0%, #93a37f 42%, #c9a54e 100%);
+  box-shadow: inset -3px 0 5px -2px rgba(60, 72, 48, 0.35);
+  transition: width 0.9s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.84rem; color: var(--ink-soft); }
@@ -357,14 +442,21 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
 
 .split-bar {
   display: flex;
-  height: 14px;
-  border-radius: 99px;
+  height: 16px;
+  border-radius: 9px 12px 10px 11px / 11px 9px 12px 10px;
   overflow: hidden;
-  background: var(--ivory-deep);
+  background: rgba(125, 144, 112, 0.12);
+  box-shadow: inset 0 1px 2px rgba(94, 84, 62, 0.07);
   margin-bottom: 10px;
 }
-.split-noiva { background: var(--rose); transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
-.split-noivo { background: var(--sage); transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+.split-noiva,
+.split-noivo {
+  transition: width 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+  box-shadow: inset 0 -3px 5px -3px rgba(60, 50, 40, 0.4);
+}
+/* as duas aguadas se encontram no meio e sangram uma na outra */
+.split-noiva { background: linear-gradient(90deg, #d3a79b 0%, #c4948a 88%, rgba(196, 148, 138, 0.55) 100%); }
+.split-noivo { background: linear-gradient(90deg, rgba(125, 144, 112, 0.55) 0%, #7d9070 12%, #8c9d78 100%); }
 
 .dash-mini {
   display: grid;
@@ -373,15 +465,17 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
   margin: 2px 0 12px;
 }
 .dash-mini-item {
-  background: var(--ivory);
-  border: 1px solid rgba(179, 137, 46, 0.14);
-  border-radius: 12px;
+  background: rgba(247, 242, 231, 0.75);
+  border: 1px solid rgba(125, 144, 112, 0.22);
+  border-radius: var(--corte-mini);
   padding: 9px 6px;
   text-align: center;
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
+.dash-mini-item:nth-child(3n+1) { transform: rotate(-0.5deg); }
+.dash-mini-item:nth-child(3n) { transform: rotate(0.5deg); }
 .dm-num {
   font-family: var(--font-display);
   font-weight: 550;
@@ -419,7 +513,7 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
   gap: 10px;
   font-size: 0.88rem;
   padding: 7px 0;
-  border-top: 1px dashed rgba(179, 137, 46, 0.25);
+  border-top: 1px solid rgba(125, 144, 112, 0.22);
   color: var(--ink-soft);
 }
 .mini-list li:first-child { border-top: none; }
@@ -428,12 +522,13 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
 /* ---------- Forms ---------- */
 
 .form-card {
-  background: var(--paper);
-  border: 1px solid rgba(179, 137, 46, 0.18);
-  border-radius: var(--radius);
-  padding: 14px;
-  box-shadow: var(--shadow);
-  margin-bottom: 14px;
+  background: transparent;
+  border: 24px solid transparent;
+  border-image: var(--mancha);
+  border-radius: 0;
+  padding: 0;
+  filter: drop-shadow(0 10px 12px rgba(88, 100, 70, 0.14));
+  margin-bottom: 4px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -754,10 +849,10 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
 .filter-row::-webkit-scrollbar { display: none; }
 
 .chip {
-  border: 1.5px solid var(--ivory-deep);
-  background: var(--paper);
+  border: 1.5px solid rgba(125, 144, 112, 0.28);
+  background: var(--papel);
   color: var(--ink-soft);
-  border-radius: 99px;
+  border-radius: 13px 16px 12px 15px / 15px 12px 16px 13px;
   padding: 7px 15px;
   font-size: 0.82rem;
   font-weight: 700;
@@ -775,9 +870,9 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
 .item-list, .pair-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
 
 .list-item {
-  background: var(--paper);
-  border: 1px solid rgba(179, 137, 46, 0.18);
-  border-radius: var(--radius);
+  background: var(--papel);
+  border: 1px solid var(--tinta-borda);
+  border-radius: var(--corte-mini);
   padding: 12px 14px;
   display: flex;
   align-items: center;
@@ -812,7 +907,12 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
 }
 
 .list-item.is-done .item-title { text-decoration: line-through; color: var(--ink-faint); }
-.list-item.is-done { background: var(--sage-soft); border-color: rgba(125, 144, 112, 0.4); }
+.list-item.is-done {
+  background:
+    radial-gradient(ellipse 90% 120% at 12% 50%, rgba(125, 144, 112, 0.26), rgba(125, 144, 112, 0.10) 60%, rgba(125, 144, 112, 0.05)),
+    var(--papel);
+  border-color: rgba(125, 144, 112, 0.42);
+}
 .list-item.is-done .item-valor { color: var(--ok); }
 
 .badge {
@@ -965,10 +1065,12 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
   left: 0;
   right: 0;
   z-index: 30;
-  background: rgba(255, 253, 248, 0.92);
+  background:
+    url("../img/traco.svg") top center / 100% 14px no-repeat,
+    rgba(255, 253, 248, 0.9);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border-top: 1px solid rgba(179, 137, 46, 0.25);
+  border-top: none;
   display: flex;
   justify-content: space-around;
   gap: 1px;
@@ -1057,9 +1159,9 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
 }
 .busca-wrap input {
   width: 100%;
-  border: 1.5px solid var(--ivory-deep);
-  background: var(--paper);
-  border-radius: 99px;
+  border: 1.5px solid rgba(125, 144, 112, 0.28);
+  background: var(--papel);
+  border-radius: 16px 20px 15px 18px / 18px 15px 20px 16px;
   padding: 10px 14px 10px 38px;
   font-size: 0.9rem;
   appearance: none;

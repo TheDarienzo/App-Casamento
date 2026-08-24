@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1400" preserveAspectRatio="xMidYMin slice">
+  <defs>
+    <!-- espalha as bordas como tinta em papel molhado -->
+    <filter id="sangra" x="-25%" y="-25%" width="150%" height="150%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.013 0.017" numOctaves="4" seed="9" result="r"/>
+      <feDisplacementMap in="SourceGraphic" in2="r" scale="42" xChannelSelector="R" yChannelSelector="G"/>
+      <feGaussianBlur stdDeviation="6"/>
+    </filter>
+    <filter id="sangra2" x="-25%" y="-25%" width="150%" height="150%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02 0.015" numOctaves="3" seed="31" result="r"/>
+      <feDisplacementMap in="SourceGraphic" in2="r" scale="34" xChannelSelector="R" yChannelSelector="G"/>
+      <feGaussianBlur stdDeviation="9"/>
+    </filter>
+
+    <!-- pigmento acumula na borda da poça, como aquarela de verdade -->
+    <radialGradient id="sage" cx="45%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#8ea37f" stop-opacity="0.10"/>
+      <stop offset="70%" stop-color="#7d9070" stop-opacity="0.20"/>
+      <stop offset="100%" stop-color="#5f7355" stop-opacity="0.34"/>
+    </radialGradient>
+    <radialGradient id="rosa" cx="55%" cy="45%" r="60%">
+      <stop offset="0%" stop-color="#e0aca3" stop-opacity="0.10"/>
+      <stop offset="72%" stop-color="#d59a90" stop-opacity="0.20"/>
+      <stop offset="100%" stop-color="#c08278" stop-opacity="0.32"/>
+    </radialGradient>
+    <radialGradient id="ouro" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#e2c485" stop-opacity="0.10"/>
+      <stop offset="74%" stop-color="#d4b46a" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#b3892e" stop-opacity="0.30"/>
+    </radialGradient>
+  </defs>
+
+  <g filter="url(#sangra)">
+    <ellipse cx="120" cy="90" rx="240" ry="170" fill="url(#sage)"/>
+    <ellipse cx="720" cy="330" rx="200" ry="150" fill="url(#rosa)"/>
+    <ellipse cx="90" cy="760" rx="190" ry="150" fill="url(#ouro)"/>
+    <ellipse cx="700" cy="1120" rx="230" ry="180" fill="url(#sage)"/>
+  </g>
+  <g filter="url(#sangra2)" opacity="0.75">
+    <ellipse cx="620" cy="60" rx="150" ry="110" fill="url(#ouro)"/>
+    <ellipse cx="180" cy="430" rx="150" ry="120" fill="url(#rosa)"/>
+    <ellipse cx="430" cy="960" rx="180" ry="130" fill="url(#sage)"/>
+    <ellipse cx="250" cy="1280" rx="170" ry="130" fill="url(#rosa)"/>
+  </g>
+</svg>
