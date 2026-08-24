@@ -256,12 +256,14 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
 .countdown-grid {
   display: flex;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
   margin: 12px 0 10px;
 }
 
 .cd-unit {
-  min-width: 64px;
+  min-width: 56px;
+  /* a folga lateral do número está no próprio .cd-num, para a caixa
+     crescer junto quando a contagem tiver mais algarismos */
   background: rgba(255, 253, 248, 0.08);
   border: 1px solid rgba(212, 180, 106, 0.28);
   border-radius: var(--corte-mini);
@@ -270,10 +272,34 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
   flex-direction: column;
 }
 
+/* A máscara de aquarela recorta o desenho na borda da caixa do elemento.
+   Estes números são escritos à mão, com traço que ultrapassa a largura da
+   letra — sem esta folga o último algarismo aparece cortado.
+   A folga entra como padding (e não margem negativa) de propósito: assim a
+   caixa em volta cresce junto e o número continua cabendo quando fica maior. */
+.dm-num,
+.cd-num,
+.cd-num.longo { font-size: 1.85rem; }
+
+.cd-lbl {
+  padding: 0 5px;
+}
+
+/* alinhado à esquerda: puxa só desse lado, para o número não deslocar */
+.stat-num {
+  padding: 0 5px;
+  margin-left: -5px;
+}
+
 .cd-num {
   font-family: var(--font-conta);
   font-weight: 700;
   font-size: 2.4rem;
+  white-space: nowrap;
+  /* altura fixa: quando o número encolhe, os rótulos continuam alinhados */
+  min-height: 2.4rem;
+  display: grid;
+  place-items: center;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }

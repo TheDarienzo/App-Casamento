@@ -6,7 +6,7 @@
 (() => {
   "use strict";
 
-  const VERSAO_APP = "23";
+  const VERSAO_APP = "24";
   const STORAGE_KEY = "nosso-casamento-v1";
   const CASAL_KEY = "nosso-casamento-casal";
   // bilhete de sessão assinado pelo servidor (substitui guardar o código do casal)
@@ -322,7 +322,10 @@
     diff -= min * 6e4;
     const seg = Math.floor(diff / 1e3);
 
-    $("#cd-dias").textContent = String(dias);
+    const textoDias = String(dias);
+    $("#cd-dias").textContent = textoDias;
+    // a partir de 4 algarismos o número precisa encolher para caber no quadro
+    $("#cd-dias").classList.toggle("longo", textoDias.length > 3);
     $("#cd-horas").textContent = String(horas).padStart(2, "0");
     $("#cd-min").textContent = String(min).padStart(2, "0");
     $("#cd-seg").textContent = String(seg).padStart(2, "0");
