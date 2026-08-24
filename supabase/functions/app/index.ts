@@ -34,6 +34,52 @@ function json(dados: unknown, status = 200): Response {
   });
 }
 
+const LISTAS = ["convidados", "itens", "padrinhos", "fornecedores", "presentes", "notas"];
+
+type Estado = Record<string, unknown>;
+
+// Junta o que veio do aparelho com o que já está na nuvem, em vez de
+// substituir: cada item é identificado pelo id, então o que um celular
+// cadastrou não some quando o outro salva. Exclusões viajam em "apagados".
+function mesclarEstados(nuvem: Estado, cliente: Estado): Estado {
+  const apagados = new Map<string, string>();
+  for (const fonte of [nuvem?.apagados, cliente?.apagados]) {
+    if (Array.isArray(fonte)) {
+      for (const a of fonte) {
+        if (a && typeof a === "object" && (a as any).id) {
+          const id = String((a as any).id);
+          const em = String((a as any).em ?? "");
+          if (!apagados.has(id) || em > (apagados.get(id) ?? "")) apagados.set(id, em);
+        }
+      }
+    }
+  }
+
+  const saida: Estado = { config: cliente?.config ?? nuvem?.config ?? {} };
+
+  for (const chave of LISTAS) {
+    const mapa = new Map<string, unknown>();
+    for (const lado of [nuvem?.[chave], cliente?.[chave]]) {
+      if (!Array.isArray(lado)) continue;
+      // o aparelho que está salvando entra por último e vence em caso de edição
+      for (const item of lado) {
+        const id = item && typeof item === "object" ? (item as any).id : null;
+        if (id) mapa.set(String(id), item);
+      }
+    }
+    for (const id of apagados.keys()) mapa.delete(id);
+    saida[chave] = [...mapa.values()];
+  }
+
+  // guarda só as marcas de exclusão mais recentes, para não crescer sem fim
+  saida.apagados = [...apagados.entries()]
+    .map(([id, em]) => ({ id, em }))
+    .sort((a, b) => String(b.em).localeCompare(String(a.em)))
+    .slice(0, 300);
+
+  return saida;
+}
+
 async function membros(casal: string): Promise<string[]> {
   const { data } = await supabase.rpc("membros_do_casal", { p_casal: casal });
   return Array.isArray(data) ? data : [];
@@ -148,15 +194,39 @@ Deno.serve(async (req: Request) => {
     const estado = corpo.estado;
     if (typeof estado !== "object" || estado === null) return json({ erro: "estado inválido" }, 400);
     if (JSON.stringify(estado).length > ESTADO_MAX_BYTES) return json({ erro: "estado grande demais" }, 413);
-    const { data, error } = await supabase
-      .from("casamentos")
-      .update({ estado, atualizado_em: new Date().toISOString() })
-      .eq("id", casal)
-      .select("id, atualizado_em")
-      .maybeSingle();
-    if (error) return json({ erro: "falha ao salvar" }, 500);
-    if (!data) return json({ erro: "código não encontrado" }, 404);
-    return json({ ok: true, atualizado_em: data.atualizado_em });
+
+    // lê, mescla e grava só se ninguém tiver gravado no meio do caminho
+    for (let tentativa = 0; tentativa < 4; tentativa++) {
+      const atual = await supabase
+        .from("casamentos")
+        .select("estado, atualizado_em")
+        .eq("id", casal)
+        .maybeSingle();
+      if (atual.error) return json({ erro: "falha ao salvar" }, 500);
+      if (!atual.data) return json({ erro: "código não encontrado" }, 404);
+
+      const mesclado = mesclarEstados(
+        (atual.data.estado ?? {}) as Estado,
+        estado as Estado,
+      );
+      if (JSON.stringify(mesclado).length > ESTADO_MAX_BYTES) {
+        return json({ erro: "estado grande demais" }, 413);
+      }
+
+      const gravado = await supabase
+        .from("casamentos")
+        .update({ estado: mesclado, atualizado_em: new Date().toISOString() })
+        .eq("id", casal)
+        .eq("atualizado_em", atual.data.atualizado_em)
+        .select("atualizado_em")
+        .maybeSingle();
+      if (gravado.error) return json({ erro: "falha ao salvar" }, 500);
+      if (gravado.data) {
+        return json({ ok: true, atualizado_em: gravado.data.atualizado_em, estado: mesclado });
+      }
+      // outro aparelho gravou primeiro: refaz a mesclagem com o dado novo
+    }
+    return json({ erro: "não foi possível salvar agora" }, 409);
   }
 
   return json({ erro: "operação desconhecida" }, 400);

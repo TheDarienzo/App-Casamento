@@ -6,7 +6,7 @@
 (() => {
   "use strict";
 
-  const VERSAO_APP = "16";
+  const VERSAO_APP = "17";
   const STORAGE_KEY = "nosso-casamento-v1";
   const CASAL_KEY = "nosso-casamento-casal";
 
@@ -22,6 +22,7 @@
     fornecedores: [], // { id, nome, categoria, contato }
     presentes: [],    // { id, nome, valor (centavos), link, status: "falta"|"comprado"|"ganho" }
     notas: [],        // { id, texto, cor, autor, fixada, criadoEm, editadoEm }
+    apagados: [],     // { id, em } — o que foi removido, para não voltar na sincronização
   });
 
   let state = carregar();
@@ -58,6 +59,18 @@
   }
 
   const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
+
+  const LISTAS = ["convidados", "itens", "padrinhos", "fornecedores", "presentes", "notas"];
+
+  // marca ids como apagados para que a sincronização não os traga de volta
+  function marcarApagados(...ids) {
+    const em = new Date().toISOString();
+    if (!Array.isArray(state.apagados)) state.apagados = [];
+    for (const id of ids.flat()) {
+      if (id) state.apagados.push({ id: String(id), em });
+    }
+    if (state.apagados.length > 300) state.apagados = state.apagados.slice(-300);
+  }
 
   /* ---------- helpers ---------- */
 
@@ -514,6 +527,7 @@
       c.confirmado = !c.confirmado;
     } else if (acao === "remover") {
       if (!confirm(`Remover ${c.nome} da lista?`)) return;
+      marcarApagados(id);
       state.convidados = state.convidados.filter((x) => x.id !== id);
     }
     salvar();
@@ -631,6 +645,7 @@
       if (item.resolvido) toast("Resolvido! 🎉");
     } else if (acao === "remover") {
       if (!confirm(`Remover "${item.descricao}"?`)) return;
+      marcarApagados(id);
       state.itens = state.itens.filter((x) => x.id !== id);
     }
     salvar();
@@ -736,6 +751,7 @@
       return;
     }
     if (!confirm(`Remover ${p.padrinho} & ${p.madrinha}?`)) return;
+    marcarApagados(id);
     state.padrinhos = state.padrinhos.filter((x) => x.id !== id);
     salvar();
     renderTudo();
@@ -838,6 +854,7 @@
       return;
     }
     if (!confirm(`Remover ${f.nome}?`)) return;
+    marcarApagados(id);
     state.fornecedores = state.fornecedores.filter((x) => x.id !== id);
     salvar();
     renderTudo();
@@ -963,6 +980,7 @@
       else if (p.status === "ganho") toast("Que presente! 🎁💛");
     } else if (acao === "remover") {
       if (!confirm(`Remover "${p.nome}" da lista?`)) return;
+      marcarApagados(id);
       state.presentes = state.presentes.filter((x) => x.id !== id);
     }
     salvar();
@@ -1208,6 +1226,7 @@
       }
     } else if (acao === "apagar") {
       if (!confirm("Apagar esta anotação?")) return;
+      marcarApagados(nota.id);
       state.notas = state.notas.filter((x) => x.id !== nota.id);
       if (notaEditando === nota.id) notaEditando = "";
       salvar();
@@ -1355,7 +1374,10 @@
   $("#btn-limpar").addEventListener("click", () => {
     if (!confirm("Apagar TODOS os dados deste aparelho? Essa ação não pode ser desfeita.")) return;
     if (!confirm("Tem certeza mesmo? Considere exportar um backup antes.")) return;
+    marcarApagados(LISTAS.flatMap((lista) => (state[lista] || []).map((item) => item.id)));
+    const apagados = state.apagados;
     state = estadoInicial();
+    state.apagados = apagados;
     salvar();
     preencherConfig();
     renderTudo();
@@ -1402,22 +1424,43 @@
       // guarda o carimbo da nossa própria escrita para o polling não
       // reaplicar os mesmos dados como se fossem novidade
       if (r && r.atualizado_em) ultimoAtualizadoEm = r.atualizado_em;
+      // o servidor devolve tudo somado (o nosso + o que o outro celular
+      // cadastrou): aplica se trouxe novidade e nada está sendo editado
+      if (r && r.estado && !editandoId && !notaEditando) {
+        const trouxeNovidade = LISTAS.some(
+          (lista) => JSON.stringify(r.estado[lista] || []) !== JSON.stringify(state[lista] || [])
+        );
+        if (trouxeNovidade) {
+          state = { ...estadoInicial(), ...r.estado, config: { ...estadoInicial().config, ...(r.estado.config || {}) } };
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
+          preencherConfig();
+          renderTudo();
+        }
+      }
       syncPendente = false;
-    } catch {
-      syncPendente = true;
+    } catch (e) {
+      if (e.status === 404) {
+        guardarCasal("");
+        toast("A conta foi desconectada; entre novamente.");
+      } else {
+        syncPendente = true;
+      }
     }
     renderSync();
   }
 
   // Verifica a nuvem periodicamente e aplica se o OUTRO celular mudou algo.
-  // Não sobrescreve enquanto há edição local pendente nem enquanto o
-  // usuário está digitando num campo.
+  // Não sobrescreve enquanto há edição local pendente. Só o formulário de
+  // configurações é preenchido de volta, então apenas ele bloqueia a
+  // atualização — os campos de cadastro e de busca não atrapalham (antes
+  // qualquer campo em foco travava a sincronização, e o app deixa o cursor
+  // no campo de nome logo depois de cadastrar alguém).
   async function puxarSeMudou() {
     if (!casal || envioPendente || syncPendente) return;
     if (editandoId || notaEditando) return; // não sobrescreve algo sendo editado
     if (document.visibilityState !== "visible") return;
     const ativo = document.activeElement;
-    if (ativo && /^(INPUT|TEXTAREA|SELECT)$/.test(ativo.tagName)) return;
+    if (ativo && ativo.closest && ativo.closest("#form-config")) return;
     try {
       const r = await api({ op: "estado", casal });
       if (!r || !r.atualizado_em || r.atualizado_em === ultimoAtualizadoEm) return;
@@ -1665,6 +1708,18 @@
   $("#btn-sair-conta").addEventListener("click", fazerLogout);
   $("#btn-logout").addEventListener("click", fazerLogout);
 
+  // Ao abrir o app, manda o que está guardado no aparelho e recebe de volta
+  // tudo somado — assim nada que ficou só num celular se perde.
+  async function sincronizarAoAbrir() {
+    if (!casal) return;
+    const temDadosLocais = LISTAS.some((lista) => (state[lista] || []).length > 0);
+    if (temDadosLocais) {
+      await enviarAgora();
+    } else {
+      await baixarDaNuvem();
+    }
+  }
+
   async function baixarDaNuvem() {
     if (!casal) return;
     try {
@@ -1725,7 +1780,7 @@
   renderTudo();
   renderSync();
   renderLogin();
-  baixarDaNuvem();
+  sincronizarAoAbrir();
   buscarMembros();
 
   // primeira visita: leva direto para a configuração
