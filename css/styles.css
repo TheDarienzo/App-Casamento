@@ -1314,8 +1314,8 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
 }
 
 .foto-grande img {
-  max-width: min(92vw, 520px);
-  max-height: 72vh;
+  max-width: min(94vw, 700px);
+  max-height: 74vh;
   object-fit: contain;
   /* moldura de papel pintado, a mesma dos cartões */
   border: 18px solid transparent;

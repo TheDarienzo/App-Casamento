@@ -6,7 +6,7 @@
 (() => {
   "use strict";
 
-  const VERSAO_APP = "22";
+  const VERSAO_APP = "23";
   const STORAGE_KEY = "nosso-casamento-v1";
   const CASAL_KEY = "nosso-casamento-casal";
   // bilhete de sessão assinado pelo servidor (substitui guardar o código do casal)
@@ -1364,24 +1364,44 @@
   /* ---------- foto do casal ---------- */
 
   // Reduz a imagem para caber com folga no estado sincronizado (limite ~512KB).
+  // A foto viaja dentro do estado, então tem orçamento de tamanho. Em vez de
+  // fixar um lado pequeno, tenta o maior que caiba: começa grande e só desce
+  // quando o arquivo passa do limite. Assim ela fica nítida ao ser expandida
+  // sem inchar a sincronização.
+  const FOTO_LIMITE = 240000; // caracteres do endereço de dados
+  const FOTO_TENTATIVAS = [
+    { lado: 1100, qualidade: 0.82 },
+    { lado: 1100, qualidade: 0.7 },
+    { lado: 900, qualidade: 0.72 },
+    { lado: 750, qualidade: 0.7 },
+    { lado: 600, qualidade: 0.68 },
+    { lado: 460, qualidade: 0.66 },
+  ];
+
   function lerFotoReduzida(arquivo, cb) {
     const leitor = new FileReader();
     leitor.onload = () => {
       const img = new Image();
       img.onload = () => {
-        const MAX = 400;
-        const escala = Math.min(1, MAX / Math.max(img.width, img.height));
-        const w = Math.max(1, Math.round(img.width * escala));
-        const h = Math.max(1, Math.round(img.height * escala));
         const canvas = document.createElement("canvas");
-        canvas.width = w;
-        canvas.height = h;
-        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-        try {
-          cb(canvas.toDataURL("image/jpeg", 0.82));
-        } catch {
-          cb(null);
+        const ctx = canvas.getContext("2d");
+        let ultima = null;
+        for (const { lado, qualidade } of FOTO_TENTATIVAS) {
+          const escala = Math.min(1, lado / Math.max(img.width, img.height));
+          canvas.width = Math.max(1, Math.round(img.width * escala));
+          canvas.height = Math.max(1, Math.round(img.height * escala));
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          let url;
+          try {
+            url = canvas.toDataURL("image/jpeg", qualidade);
+          } catch {
+            cb(null);
+            return;
+          }
+          ultima = url;
+          if (url.length <= FOTO_LIMITE) break;
         }
+        cb(ultima);
       };
       img.onerror = () => cb(null);
       img.src = leitor.result;
@@ -1389,6 +1409,7 @@
     leitor.onerror = () => cb(null);
     leitor.readAsDataURL(arquivo);
   }
+
 
   $("#btn-escolher-foto").addEventListener("click", () => $("#input-foto").click());
 
