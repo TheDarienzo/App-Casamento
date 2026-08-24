@@ -50,7 +50,8 @@ returns jsonb language sql stable security definer set search_path = public as $
         from convidados where casal_id = c.id and apagado_em is null), '[]'::jsonb),
       'itens', coalesce((
         select jsonb_agg(jsonb_build_object(
-          'id', id, 'descricao', descricao, 'valor', valor, 'resolvido', resolvido
+          'id', id, 'descricao', descricao, 'valor', valor, 'resolvido', resolvido,
+          'prazo', coalesce(to_char(prazo, 'YYYY-MM-DD'), '')
         ) order by criado_em)
         from checklist where casal_id = c.id and apagado_em is null), '[]'::jsonb),
       'padrinhos', coalesce((
@@ -134,15 +135,17 @@ begin
          acompanhantes = excluded.acompanhantes, confirmado = excluded.confirmado
        where convidados.casal_id = excluded.casal_id;
 
-  insert into checklist (id, casal_id, descricao, valor, resolvido)
+  insert into checklist (id, casal_id, descricao, valor, resolvido, prazo)
   select j->>'id', p_casal,
          coalesce(j->>'descricao', ''),
          greatest(para_inteiro(j->>'valor', 0), 0),
-         para_booleano(j->>'resolvido')
+         para_booleano(j->>'resolvido'),
+         para_data(j->>'prazo')
     from jsonb_array_elements(coalesce(p_estado->'itens', '[]'::jsonb)) j
    where jsonb_typeof(j) = 'object' and nullif(j->>'id', '') is not null
       on conflict (id) do update set
-         descricao = excluded.descricao, valor = excluded.valor, resolvido = excluded.resolvido
+         descricao = excluded.descricao, valor = excluded.valor,
+         resolvido = excluded.resolvido, prazo = excluded.prazo
        where checklist.casal_id = excluded.casal_id;
 
   insert into padrinhos (id, casal_id, padrinho, madrinha)

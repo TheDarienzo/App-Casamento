@@ -6,7 +6,7 @@
 (() => {
   "use strict";
 
-  const VERSAO_APP = "19";
+  const VERSAO_APP = "20";
   const STORAGE_KEY = "nosso-casamento-v1";
   const CASAL_KEY = "nosso-casamento-casal";
 
@@ -17,7 +17,7 @@
   const estadoInicial = () => ({
     config: { noiva: "", noivo: "", data: "", local: "", foto: "" },
     convidados: [],   // { id, nome, lado: "noiva"|"noivo", acompanhantes, confirmado }
-    itens: [],        // { id, descricao, valor (centavos), resolvido }
+    itens: [],        // { id, descricao, valor (centavos), resolvido, prazo: "AAAA-MM-DD" }
     padrinhos: [],    // { id, padrinho, madrinha }
     fornecedores: [], // { id, nome, categoria, contato }
     presentes: [],    // { id, nome, valor (centavos), link, status: "falta"|"comprado"|"ganho" }
@@ -164,6 +164,63 @@
   }
 
   const valorParaCampo = (centavos) => (centavos ? (centavos / 100).toFixed(2).replace(".", ",") : "");
+
+  // Quantos dias faltam até o prazo. Compara só as datas, sem as horas,
+  // para que "hoje" continue sendo hoje até a meia-noite.
+  function diasAte(prazo) {
+    if (!prazo) return null;
+    const [ano, mes, dia] = String(prazo).split("-").map(Number);
+    if (!ano || !mes || !dia) return null;
+    const alvo = new Date(ano, mes - 1, dia);
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    return Math.round((alvo - hoje) / 86400000);
+  }
+
+  // "faltam 3 dias", "vence hoje", "2 semanas", "atrasado 5 dias"…
+  function prazoTexto(dias, curto) {
+    if (dias === null) return "";
+    if (dias < 0) {
+      const d = Math.abs(dias);
+      if (curto) return d === 1 ? "1 dia atrás" : `${d} dias atrás`;
+      return d === 1 ? "atrasado 1 dia" : `atrasado ${d} dias`;
+    }
+    if (dias === 0) return curto ? "hoje" : "vence hoje";
+    if (dias === 1) return curto ? "amanhã" : "vence amanhã";
+    if (dias < 14) return curto ? `${dias} dias` : `faltam ${dias} dias`;
+    if (dias < 60) {
+      const semanas = Math.round(dias / 7);
+      return curto ? `${semanas} sem.` : `faltam ${semanas} semanas`;
+    }
+    const meses = Math.round(dias / 30);
+    return curto ? `${meses} meses` : `faltam ${meses} meses`;
+  }
+
+  // vermelho para o que passou, dourado para o que está chegando
+  const prazoClasse = (dias) =>
+    dias === null ? "" : dias < 0 ? "prazo-vencido" : dias <= 7 ? "prazo-perto" : "prazo-ok";
+
+  const prazoCurto = (prazo) => {
+    const [ano, mes, dia] = String(prazo).split("-");
+    return `${dia}/${mes}/${ano.slice(2)}`;
+  };
+
+  // etiqueta de prazo usada no checklist e no painel
+  function selo(prazo, resolvido, curto) {
+    if (!prazo) return "";
+    const dias = diasAte(prazo);
+    if (dias === null) return "";
+    if (resolvido) return `<span class="prazo-selo prazo-feito">${prazoCurto(prazo)}</span>`;
+    return `<span class="prazo-selo ${prazoClasse(dias)}" title="Prazo: ${prazoCurto(prazo)}">${escapeHtml(prazoTexto(dias, curto))}</span>`;
+  }
+
+  // mais urgente primeiro; sem prazo vai para o fim
+  const porUrgencia = (a, b) => {
+    if (!a.prazo && !b.prazo) return 0;
+    if (!a.prazo) return 1;
+    if (!b.prazo) return -1;
+    return a.prazo < b.prazo ? -1 : a.prazo > b.prazo ? 1 : 0;
+  };
 
   // texto digitado na busca de uma seção, em minúsculas e sem espaços nas pontas
   const termoDe = (secao) => normalizar(busca[secao].trim());
@@ -344,7 +401,17 @@
     $("#cl-faltam").textContent = pendentes.length;
     $("#cl-valor-pendente").textContent = brl(valorPendente);
 
-    const proximos = pendentes.slice(0, 4);
+    // as que estão mais perto de vencer aparecem primeiro
+    const proximos = [...pendentes].sort(porUrgencia).slice(0, 4);
+    const atrasadas = pendentes.filter((i) => {
+      const d = diasAte(i.prazo);
+      return d !== null && d < 0;
+    }).length;
+
+    $("#dash-pendentes-titulo").textContent = atrasadas
+      ? `Próximas pendências · ${atrasadas} atrasada${atrasadas === 1 ? "" : "s"}`
+      : "Próximas pendências";
+    $("#dash-pendentes-titulo").classList.toggle("tem-atraso", atrasadas > 0);
     $("#dash-pendentes-titulo").hidden = state.itens.length === 0;
     $("#dash-pendentes").innerHTML = state.itens.length === 0
       ? `<li><span>Cadastre as tarefas do casamento na aba Checklist ✨</span></li>`
@@ -352,7 +419,10 @@
         ? proximos
             .map(
               (i) =>
-                `<li><span>${escapeHtml(i.descricao)}</span>` +
+                `<li><span class="mini-nome">${escapeHtml(i.descricao)}</span>` +
+                (i.prazo
+                  ? selo(i.prazo, false, true)
+                  : `<span class="prazo-selo prazo-sem">sem prazo</span>`) +
                 (i.valor ? `<span class="mini-valor">${brl(i.valor)}</span>` : "") +
                 `</li>`
             )
@@ -549,11 +619,14 @@
     const itens = state.itens;
 
     const termo = termoDe("checklist");
-    const filtrados = itens.filter((i) => {
-      if (filtroChecklist === "pendentes" && i.resolvido) return false;
-      if (filtroChecklist === "resolvidos" && !i.resolvido) return false;
-      return combina(termo, i.descricao);
-    });
+    const filtrados = itens
+      .filter((i) => {
+        if (filtroChecklist === "pendentes" && i.resolvido) return false;
+        if (filtroChecklist === "resolvidos" && !i.resolvido) return false;
+        return combina(termo, i.descricao);
+      })
+      // o que está mais perto de vencer aparece antes; resolvidos vão para o fim
+      .sort((a, b) => (a.resolvido === b.resolvido ? porUrgencia(a, b) : a.resolvido ? 1 : -1));
 
     lista.innerHTML = filtrados
       .map((i) => {
@@ -561,10 +634,16 @@
           return `<li class="list-item is-editing" data-id="${i.id}">
             <div class="edit-form">
               <input type="text" class="ed-desc ed-foco" value="${escapeAttr(i.descricao)}" maxlength="120" placeholder="O que precisa ser resolvido?">
-              <label class="field-inline field-money">
-                <span>R$</span>
-                <input type="text" class="ed-valor" inputmode="decimal" value="${valorParaCampo(i.valor)}" placeholder="0,00">
-              </label>
+              <div class="edit-linha">
+                <label class="field-inline field-money">
+                  <span>R$</span>
+                  <input type="text" class="ed-valor" inputmode="decimal" value="${valorParaCampo(i.valor)}" placeholder="0,00">
+                </label>
+                <label class="field-inline field-prazo">
+                  <span>até</span>
+                  <input type="date" class="ed-prazo" value="${escapeAttr(i.prazo || "")}">
+                </label>
+              </div>
               ${acoesEdicao()}
             </div>
           </li>`;
@@ -573,6 +652,7 @@
           <button class="check-toggle ${i.resolvido ? "is-on" : ""}" data-acao="resolver" aria-label="Marcar como resolvido" title="Marcar como resolvido">${iconeCheck}</button>
           <div class="item-main">
             <div class="item-title">${destacar(i.descricao, termo)}</div>
+            ${i.prazo ? `<div class="item-meta">${selo(i.prazo, i.resolvido)}</div>` : ""}
           </div>
           ${i.valor ? `<span class="item-valor">${brl(i.valor)}</span>` : ""}
           ${btnEditar("tarefa")}
@@ -601,7 +681,8 @@
     const desc = $("#item-desc").value.trim();
     if (!desc) return;
     const valor = parseValor($("#item-valor").value);
-    state.itens.push({ id: uid(), descricao: desc, valor, resolvido: false });
+    const prazo = $("#item-prazo").value;
+    state.itens.push({ id: uid(), descricao: desc, valor, resolvido: false, prazo });
     salvar();
     renderTudo();
     e.target.reset();
@@ -634,6 +715,7 @@
       }
       item.descricao = desc;
       item.valor = parseValor(li.querySelector(".ed-valor").value);
+      item.prazo = li.querySelector(".ed-prazo").value;
       editandoId = "";
       salvar();
       renderTudo();

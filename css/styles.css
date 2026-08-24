@@ -520,6 +520,85 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
 .mini-list li:first-child { border-top: none; }
 .mini-list .mini-valor { color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
+/* ---------- Prazo das tarefas ----------
+   Etiqueta com o tempo que falta: dourada quando está chegando,
+   vermelha quando já passou, discreta quando ainda há folga. */
+.prazo-selo {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 4px 9px;
+  border-radius: var(--corte-mini);
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.prazo-selo::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.75;
+}
+.prazo-ok {
+  color: var(--ink-soft);
+  background: rgba(125, 144, 112, 0.13);
+  border-color: rgba(125, 144, 112, 0.26);
+}
+.prazo-perto {
+  color: #8a6714;
+  background: rgba(212, 180, 106, 0.28);
+  border-color: rgba(179, 137, 46, 0.4);
+}
+.prazo-vencido {
+  color: #8d3a29;
+  background: rgba(201, 138, 128, 0.26);
+  border-color: rgba(176, 80, 60, 0.42);
+}
+.prazo-feito {
+  color: var(--ink-faint);
+  background: rgba(125, 144, 112, 0.1);
+  border-color: rgba(125, 144, 112, 0.2);
+}
+.prazo-feito::before { display: none; }
+.prazo-sem {
+  color: var(--ink-faint);
+  background: transparent;
+  border-color: rgba(139, 145, 127, 0.3);
+}
+.prazo-sem::before { display: none; }
+.list-item.is-done .prazo-selo { opacity: 0.7; }
+
+/* campo de data no formulário e na edição */
+.field-prazo input[type="date"] {
+  width: auto;
+  min-width: 116px;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--ink);
+  padding: 9px 0;
+}
+.field-prazo input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0.55;
+  cursor: pointer;
+}
+.edit-linha { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn-largo { flex: 1; }
+
+/* painel: nome ocupa o espaço livre, prazo e valor ficam à direita */
+.mini-list li { align-items: center; }
+.mini-nome {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dash-list-titulo.tem-atraso { color: #8d3a29; }
+
 /* ---------- Forms ---------- */
 
 .form-card {
@@ -894,6 +973,16 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* tarefa com prazo: o nome pode ocupar duas linhas em vez de ser cortado,
+   já que a etiqueta de prazo abaixo dele já ocupa a segunda linha */
+.list-item:has(.prazo-selo) .item-title {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .item-meta { font-size: 0.78rem; color: var(--ink-faint); display: flex; gap: 8px; flex-wrap: wrap; }
