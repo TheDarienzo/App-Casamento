@@ -6,10 +6,15 @@
 //
 //   POST .../functions/v1/app/api  → { op: "criar" | "estado" | "salvar", ... }
 //
+// Os dados ficam em tabelas — convidados, checklist, padrinhos,
+// fornecedores, presentes e notas — uma linha por cadastro. Ler e gravar
+// é trabalho das funções ler_estado/salvar_estado, que rodam dentro do
+// banco numa transação só: ou grava tudo, ou não grava nada.
+//
 // Autenticação: o acesso aos dados exige o código do casal (uuid aleatório,
 // impossível de adivinhar), que funciona como chave secreta compartilhada.
-// A tabela `casamentos` tem RLS ligado sem policies — só esta função
-// (service role) consegue acessá-la.
+// As tabelas têm RLS ligado sem policies — só esta função (service role)
+// consegue acessá-las.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
@@ -32,52 +37,6 @@ function json(dados: unknown, status = 200): Response {
     status,
     headers: { ...CORS, "Content-Type": "application/json; charset=utf-8" },
   });
-}
-
-const LISTAS = ["convidados", "itens", "padrinhos", "fornecedores", "presentes", "notas"];
-
-type Estado = Record<string, unknown>;
-
-// Junta o que veio do aparelho com o que já está na nuvem, em vez de
-// substituir: cada item é identificado pelo id, então o que um celular
-// cadastrou não some quando o outro salva. Exclusões viajam em "apagados".
-function mesclarEstados(nuvem: Estado, cliente: Estado): Estado {
-  const apagados = new Map<string, string>();
-  for (const fonte of [nuvem?.apagados, cliente?.apagados]) {
-    if (Array.isArray(fonte)) {
-      for (const a of fonte) {
-        if (a && typeof a === "object" && (a as any).id) {
-          const id = String((a as any).id);
-          const em = String((a as any).em ?? "");
-          if (!apagados.has(id) || em > (apagados.get(id) ?? "")) apagados.set(id, em);
-        }
-      }
-    }
-  }
-
-  const saida: Estado = { config: cliente?.config ?? nuvem?.config ?? {} };
-
-  for (const chave of LISTAS) {
-    const mapa = new Map<string, unknown>();
-    for (const lado of [nuvem?.[chave], cliente?.[chave]]) {
-      if (!Array.isArray(lado)) continue;
-      // o aparelho que está salvando entra por último e vence em caso de edição
-      for (const item of lado) {
-        const id = item && typeof item === "object" ? (item as any).id : null;
-        if (id) mapa.set(String(id), item);
-      }
-    }
-    for (const id of apagados.keys()) mapa.delete(id);
-    saida[chave] = [...mapa.values()];
-  }
-
-  // guarda só as marcas de exclusão mais recentes, para não crescer sem fim
-  saida.apagados = [...apagados.entries()]
-    .map(([id, em]) => ({ id, em }))
-    .sort((a, b) => String(b.em).localeCompare(String(a.em)))
-    .slice(0, 300);
-
-  return saida;
 }
 
 async function membros(casal: string): Promise<string[]> {
@@ -162,13 +121,15 @@ Deno.serve(async (req: Request) => {
   }
 
   if (op === "criar") {
-    const estado = typeof corpo.estado === "object" && corpo.estado !== null ? corpo.estado : {};
     const { data, error } = await supabase
       .from("casamentos")
-      .insert({ estado })
+      .insert({})
       .select("id")
       .single();
     if (error || !data) return json({ erro: "falha ao criar" }, 500);
+    // o que o aparelho já tinha cadastrado entra pelas tabelas
+    const estado = typeof corpo.estado === "object" && corpo.estado !== null ? corpo.estado : null;
+    if (estado) await supabase.rpc("salvar_estado", { p_casal: data.id, p_estado: estado });
     return json({ casal: data.id });
   }
 
@@ -180,11 +141,7 @@ Deno.serve(async (req: Request) => {
   }
 
   if (op === "estado") {
-    const { data, error } = await supabase
-      .from("casamentos")
-      .select("estado, atualizado_em")
-      .eq("id", casal)
-      .maybeSingle();
+    const { data, error } = await supabase.rpc("ler_estado", { p_casal: casal });
     if (error) return json({ erro: "falha ao consultar" }, 500);
     if (!data) return json({ erro: "código não encontrado" }, 404);
     return json(data);
@@ -195,38 +152,15 @@ Deno.serve(async (req: Request) => {
     if (typeof estado !== "object" || estado === null) return json({ erro: "estado inválido" }, 400);
     if (JSON.stringify(estado).length > ESTADO_MAX_BYTES) return json({ erro: "estado grande demais" }, 413);
 
-    // lê, mescla e grava só se ninguém tiver gravado no meio do caminho
-    for (let tentativa = 0; tentativa < 4; tentativa++) {
-      const atual = await supabase
-        .from("casamentos")
-        .select("estado, atualizado_em")
-        .eq("id", casal)
-        .maybeSingle();
-      if (atual.error) return json({ erro: "falha ao salvar" }, 500);
-      if (!atual.data) return json({ erro: "código não encontrado" }, 404);
-
-      const mesclado = mesclarEstados(
-        (atual.data.estado ?? {}) as Estado,
-        estado as Estado,
-      );
-      if (JSON.stringify(mesclado).length > ESTADO_MAX_BYTES) {
-        return json({ erro: "estado grande demais" }, 413);
-      }
-
-      const gravado = await supabase
-        .from("casamentos")
-        .update({ estado: mesclado, atualizado_em: new Date().toISOString() })
-        .eq("id", casal)
-        .eq("atualizado_em", atual.data.atualizado_em)
-        .select("atualizado_em")
-        .maybeSingle();
-      if (gravado.error) return json({ erro: "falha ao salvar" }, 500);
-      if (gravado.data) {
-        return json({ ok: true, atualizado_em: gravado.data.atualizado_em, estado: mesclado });
-      }
-      // outro aparelho gravou primeiro: refaz a mesclagem com o dado novo
+    const { data, error } = await supabase.rpc("salvar_estado", {
+      p_casal: casal,
+      p_estado: estado,
+    });
+    if (error) {
+      if ((error.message || "").includes("casal_invalido")) return json({ erro: "código não encontrado" }, 404);
+      return json({ erro: "falha ao salvar" }, 500);
     }
-    return json({ erro: "não foi possível salvar agora" }, 409);
+    return json({ ok: true, ...(data as Record<string, unknown>) });
   }
 
   return json({ erro: "operação desconhecida" }, 400);
