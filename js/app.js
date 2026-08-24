@@ -6,9 +6,11 @@
 (() => {
   "use strict";
 
-  const VERSAO_APP = "20";
+  const VERSAO_APP = "21";
   const STORAGE_KEY = "nosso-casamento-v1";
   const CASAL_KEY = "nosso-casamento-casal";
+  // bilhete de sessão assinado pelo servidor (substitui guardar o código do casal)
+  const TOKEN_KEY = "nosso-casamento-token";
 
   // API de sincronização (Edge Function no Supabase). O app pode estar
   // hospedado em qualquer lugar (Cloudflare Pages, GitHub Pages, …).
@@ -1470,6 +1472,22 @@
 
   let casal = "";
   try { casal = localStorage.getItem(CASAL_KEY) || ""; } catch {}
+  let token = "";
+  try { token = localStorage.getItem(TOKEN_KEY) || ""; } catch {}
+
+  // O que o servidor precisa para saber quem está pedindo. O código do casal
+  // só vai enquanto o aparelho ainda não tiver recebido um bilhete.
+  const credencial = () => (token ? { token } : { casal });
+
+  // Vale tanto o bilhete novo quanto o código antigo, enquanto a transição durar.
+  const temSessao = () => Boolean(token || casal);
+
+  // O servidor renova o bilhete sozinho quando está perto de vencer.
+  function guardarToken(novo) {
+    if (!novo || novo === token) return;
+    token = novo;
+    try { localStorage.setItem(TOKEN_KEY, novo); } catch {}
+  }
   let syncTimer;
   let syncPendente = false;   // um envio falhou; há mudanças locais não salvas
   let envioPendente = false;  // há um envio agendado (debounce) esperando
@@ -1482,27 +1500,33 @@
       headers: { "Content-Type": "text/plain;charset=UTF-8" },
       body: JSON.stringify(corpo),
     });
+    let dados = null;
+    try { dados = await resp.json(); } catch {}
     if (!resp.ok) {
-      const erro = new Error("HTTP " + resp.status);
+      const erro = new Error((dados && dados.erro) || "HTTP " + resp.status);
       erro.status = resp.status;
+      erro.aviso = dados && dados.erro;
+      // sessão vencida ou cancelada: volta para a tela de entrada
+      if (resp.status === 401) sessaoCaiu();
       throw erro;
     }
-    return resp.json();
+    if (dados && dados.token) guardarToken(dados.token);
+    return dados;
   }
 
   function agendarEnvio() {
-    if (!casal) return;
+    if (!temSessao()) return;
     envioPendente = true;
     clearTimeout(syncTimer);
     syncTimer = setTimeout(enviarAgora, 1200);
   }
 
   async function enviarAgora() {
-    if (!casal) return;
+    if (!temSessao()) return;
     clearTimeout(syncTimer);
     envioPendente = false;
     try {
-      const r = await api({ op: "salvar", casal, estado: state });
+      const r = await api({ op: "salvar", ...credencial(), estado: state });
       // guarda o carimbo da nossa própria escrita para o polling não
       // reaplicar os mesmos dados como se fossem novidade
       if (r && r.atualizado_em) ultimoAtualizadoEm = r.atualizado_em;
@@ -1538,13 +1562,13 @@
   // qualquer campo em foco travava a sincronização, e o app deixa o cursor
   // no campo de nome logo depois de cadastrar alguém).
   async function puxarSeMudou() {
-    if (!casal || envioPendente || syncPendente) return;
+    if (!temSessao() || envioPendente || syncPendente) return;
     if (editandoId || notaEditando) return; // não sobrescreve algo sendo editado
     if (document.visibilityState !== "visible") return;
     const ativo = document.activeElement;
     if (ativo && ativo.closest && ativo.closest("#form-config")) return;
     try {
-      const r = await api({ op: "estado", casal });
+      const r = await api({ op: "estado", ...credencial() });
       if (!r || !r.atualizado_em || r.atualizado_em === ultimoAtualizadoEm) return;
       // reconfirma que nada começou a ser editado durante a busca
       if (envioPendente || syncPendente) return;
@@ -1560,20 +1584,42 @@
 
   setInterval(puxarSeMudou, 7000);
 
-  function guardarCasal(codigo) {
+  function guardarCasal(codigo, bilhete) {
     casal = codigo;
     try {
       if (codigo) localStorage.setItem(CASAL_KEY, codigo);
       else localStorage.removeItem(CASAL_KEY);
     } catch {}
+    if (bilhete !== undefined) {
+      token = bilhete || "";
+      try {
+        if (token) localStorage.setItem(TOKEN_KEY, token);
+        else localStorage.removeItem(TOKEN_KEY);
+      } catch {}
+    }
     renderSync();
+  }
+
+  // A sessão venceu ou foi cancelada em outro aparelho: pede login de novo,
+  // sem apagar o que está guardado aqui.
+  let avisandoSessao = false;
+  function sessaoCaiu() {
+    if (!token && !casal) return;
+    guardarCasal("", "");
+    if (avisandoSessao) return;
+    avisandoSessao = true;
+    setTimeout(() => {
+      renderLogin();
+      toast("Sua sessão expirou. Entre de novo 🔒");
+      avisandoSessao = false;
+    }, 0);
   }
 
   function renderSync() {
     $("#conta-usuario").textContent = usuarioLogado || "—";
     $("#conta-codigo").value = casal || "";
     const status = $("#sync-status");
-    if (!casal) {
+    if (!temSessao()) {
       status.textContent = "";
     } else if (syncPendente) {
       status.textContent = "aguardando conexão";
@@ -1601,13 +1647,13 @@
   }
 
   async function buscarMembros() {
-    if (!casal) {
+    if (!temSessao()) {
       membrosCasal = [];
       renderConta();
       return;
     }
     try {
-      const r = await api({ op: "membros", casal });
+      const r = await api({ op: "membros", ...credencial() });
       membrosCasal = Array.isArray(r.membros) ? r.membros : [];
     } catch {
       membrosCasal = [];
@@ -1628,7 +1674,7 @@
     try {
       const r = await api({ op: "juntar", usuario: usuarioLogado, senha, casal: codigo });
       membrosCasal = Array.isArray(r.membros) ? r.membros : [];
-      await entrarComCasal(r.casal);
+      await entrarComCasal(r.casal, r.token || "");
       renderConta();
       $("#juntar-codigo").value = "";
       $("#juntar-senha").value = "";
@@ -1651,7 +1697,9 @@
   try { usuarioLogado = localStorage.getItem(LOGIN_KEY) || ""; } catch {}
 
   function renderLogin() {
-    $("#login-screen").hidden = Boolean(usuarioLogado);
+    // só entra no app quem tem usuário E sessão válida: antes a sessão era
+    // o código do casal, que nunca vencia; agora ela pode cair sozinha.
+    $("#login-screen").hidden = Boolean(usuarioLogado && (token || casal));
   }
 
   // alterna entre as abas "Entrar" e "Criar conta"
@@ -1671,10 +1719,10 @@
 
   // Após o login, decide a direção da sincronização: se a nuvem já tem
   // dados, ela manda; se está vazia, sobe o que já existe neste aparelho.
-  async function entrarComCasal(codigo) {
-    guardarCasal(codigo);
+  async function entrarComCasal(codigo, bilhete) {
+    guardarCasal(codigo, bilhete);
     try {
-      const r = await api({ op: "estado", casal: codigo });
+      const r = await api({ op: "estado", ...credencial() });
       ultimoAtualizadoEm = r.atualizado_em || ultimoAtualizadoEm;
       const nuvem = r.estado || {};
       const nuvemTemDados =
@@ -1733,7 +1781,7 @@
     const erro = $("#criar-erro");
     erro.textContent = "";
     if (usuario.length < 3) { erro.textContent = "O usuário precisa ter ao menos 3 letras."; return; }
-    if (senha.length < 4) { erro.textContent = "A senha precisa ter ao menos 4 caracteres."; return; }
+    if (senha.length < 8) { erro.textContent = "A senha precisa ter ao menos 8 caracteres."; return; }
     if (senha !== senha2) { erro.textContent = "As senhas não são iguais."; return; }
     const btn = $("#btn-criar");
     btn.disabled = true;
@@ -1743,7 +1791,7 @@
       const r = await api(corpo);
       usuarioLogado = usuario.toLowerCase();
       try { localStorage.setItem(LOGIN_KEY, usuarioLogado); } catch {}
-      await entrarComCasal(r.casal);
+      await entrarComCasal(r.casal, r.token || "");
       renderLogin();
       $("#form-criar").reset();
       $("#form-login").reset();
@@ -1774,7 +1822,7 @@
     if (!confirm("Sair da conta neste aparelho? Os dados continuam salvos na nuvem.")) return;
     usuarioLogado = "";
     try { localStorage.removeItem(LOGIN_KEY); } catch {}
-    guardarCasal("");
+    guardarCasal("", "");
     ultimoAtualizadoEm = null;
     membrosCasal = [];
     editandoId = "";
@@ -1790,10 +1838,57 @@
   $("#btn-sair-conta").addEventListener("click", fazerLogout);
   $("#btn-logout").addEventListener("click", fazerLogout);
 
+  // Trocar a própria senha. O servidor exige a senha atual e, ao trocar,
+  // derruba as sessões abertas em outros aparelhos.
+  $("#btn-trocar-senha").addEventListener("click", async () => {
+    const erro = $("#senha-erro");
+    const atual = $("#senha-atual").value;
+    const nova = $("#senha-nova").value;
+    erro.textContent = "";
+    if (!atual || !nova) { erro.textContent = "Preencha as duas senhas."; return; }
+    if (nova.length < 8) { erro.textContent = "A senha nova precisa ter ao menos 8 caracteres."; return; }
+    if (nova === atual) { erro.textContent = "A senha nova precisa ser diferente da atual."; return; }
+    const btn = $("#btn-trocar-senha");
+    btn.disabled = true;
+    try {
+      const r = await api({
+        op: "trocar_senha",
+        usuario: usuarioLogado,
+        senha: atual,
+        nova,
+      });
+      if (r.token) guardarCasal(casal, r.token);
+      $("#senha-atual").value = "";
+      $("#senha-nova").value = "";
+      $("#senha-box").open = false;
+      toast("Senha trocada 🔒");
+    } catch (e) {
+      erro.textContent = e.aviso || "Não foi possível trocar a senha agora.";
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // Cancela as sessões de todos os aparelhos — inclusive este.
+  $("#btn-sair-todos").addEventListener("click", async () => {
+    if (!confirm("Desconectar todos os aparelhos? Todo mundo vai precisar entrar de novo.")) return;
+    const btn = $("#btn-sair-todos");
+    btn.disabled = true;
+    try {
+      await api({ op: "sair_de_todos", ...credencial() });
+      toast("Todos os aparelhos foram desconectados");
+      setTimeout(sessaoCaiu, 400);
+    } catch (e) {
+      toast(e.aviso || "Não foi possível desconectar agora");
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
   // Ao abrir o app, manda o que está guardado no aparelho e recebe de volta
   // tudo somado — assim nada que ficou só num celular se perde.
   async function sincronizarAoAbrir() {
-    if (!casal) return;
+    if (!temSessao()) return;
     const temDadosLocais = LISTAS.some((lista) => (state[lista] || []).length > 0);
     if (temDadosLocais) {
       await enviarAgora();
@@ -1803,9 +1898,9 @@
   }
 
   async function baixarDaNuvem() {
-    if (!casal) return;
+    if (!temSessao()) return;
     try {
-      const r = await api({ op: "estado", casal });
+      const r = await api({ op: "estado", ...credencial() });
       ultimoAtualizadoEm = r.atualizado_em || ultimoAtualizadoEm;
       state = { ...estadoInicial(), ...r.estado, config: { ...estadoInicial().config, ...(r.estado.config || {}) } };
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
@@ -1826,7 +1921,7 @@
 
   window.addEventListener("online", enviarAgora);
   document.addEventListener("visibilitychange", () => {
-    if (!casal) return;
+    if (!temSessao()) return;
     if (document.visibilityState === "hidden") {
       // envia imediatamente o que estiver pendente ao sair do app
       if (envioPendente || syncPendente) {
@@ -1834,7 +1929,7 @@
         try {
           navigator.sendBeacon(
             API_URL,
-            new Blob([JSON.stringify({ op: "salvar", casal, estado: state })], { type: "text/plain;charset=UTF-8" })
+            new Blob([JSON.stringify({ op: "salvar", ...credencial(), estado: state })], { type: "text/plain;charset=UTF-8" })
           );
         } catch {}
       }

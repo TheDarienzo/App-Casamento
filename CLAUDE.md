@@ -72,6 +72,7 @@ apagado_em    timestamptz                          -- soft delete
 ## Publicação
 
 `node scripts/subir-versao.mjs`, gerar o zip com `index.html`,
-`manifest.webmanifest`, `sw.js`, `css/`, `js/`, `icons/`, `img/*.webp`
+`manifest.webmanifest`, `sw.js`, `_headers`, `css/`, `js/`, `icons/`,
+`img/*.webp`
 (os `.svg` de origem ficam fora), e subir no Cloudflare em
 *New deployment → Upload assets*. Detalhes em `PUBLICAR.md`.

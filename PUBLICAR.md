@@ -10,8 +10,12 @@ Cloudflare Pages (grátis):
 3. Dê um nome ao projeto (ex.: `nosso-casamento`) — ele define a URL:
    `nosso-casamento-abc.pages.dev`.
 4. **Arraste todos os arquivos desta pasta** (importante: o `index.html`
-   precisa ficar na raiz do upload, então arraste o conteúdo da pasta, não o
-   zip) e clique em **Deploy site**.
+   e o `_headers` precisam ficar na raiz do upload, então arraste o conteúdo
+   da pasta, não o zip) e clique em **Deploy site**.
+
+   > O arquivo `_headers` é o que liga os cabeçalhos de segurança (CSP,
+   > proteção contra iframe, HSTS). Se ele não subir junto, o app funciona
+   > igual, mas sem essas proteções.
 5. Abra a URL gerada no celular e use **Adicionar à tela inicial /
    Instalar app** — pronto, é um aplicativo com ícone, tela cheia e
    funciona offline.
