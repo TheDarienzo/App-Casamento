@@ -1203,6 +1203,145 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
   stroke-linejoin: round;
 }
 
+/* ---------- Abertura ----------
+   Menos de um segundo: as poças de tinta abrem, os anéis entram e o painel
+   se dissolve enquanto o painel do app já aparece por baixo. Só transform e
+   opacity — nada que obrigue o celular a recalcular desenho. */
+
+.abertura {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 14px;
+  background-color: #f6f1e6;
+  background-image: url("../img/papel.webp");
+  background-size: 160px 160px;
+  overflow: hidden;
+  animation: aberturaSai 0.42s cubic-bezier(0.4, 0, 0.9, 0.3) 0.6s both;
+}
+.abertura.fim { display: none; }
+
+@keyframes aberturaSai {
+  to { opacity: 0; transform: scale(1.04); }
+}
+
+/* poça de pigmento que se abre no papel */
+.abertura-pool {
+  position: absolute;
+  width: 74vmax;
+  height: 74vmax;
+  border-radius: 50%;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.pool-sage {
+  background: radial-gradient(circle, rgba(125, 144, 112, 0.5) 0%, rgba(125, 144, 112, 0.22) 42%, transparent 68%);
+  animation: pocaAbre 0.95s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.pool-rose {
+  background: radial-gradient(circle, rgba(196, 148, 138, 0.45) 0%, rgba(196, 148, 138, 0.2) 42%, transparent 68%);
+  animation: pocaAbre 0.95s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
+  transform-origin: 60% 55%;
+}
+
+@keyframes pocaAbre {
+  0%   { opacity: 0;    transform: scale(0.28); }
+  35%  { opacity: 0.95; }
+  100% { opacity: 0;    transform: scale(1.5); }
+}
+
+/* os anéis entram com um respiro, como quem assenta o pincel */
+.abertura-aneis {
+  position: relative;
+  width: 150px;
+  height: 134px;
+  animation: aneisEntram 0.62s cubic-bezier(0.34, 1.5, 0.5, 1) 0.08s both;
+  will-change: transform, opacity;
+}
+
+@keyframes aneisEntram {
+  from { opacity: 0; transform: scale(0.62) rotate(-8deg); }
+  to   { opacity: 1; transform: none; }
+}
+
+.abertura-nome {
+  position: relative;
+  font-family: var(--font-mao);
+  font-size: 2.1rem;
+  line-height: 1;
+  color: var(--ink);
+  text-align: center;
+  padding: 0 24px;
+  animation: nomeSobe 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.26s both;
+}
+
+@keyframes nomeSobe {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .abertura { display: none; }
+}
+
+/* ---------- Foto do casal em tamanho grande ---------- */
+
+.monogram { border: 1.5px solid var(--gold-soft); padding: 0; }
+.monogram.tem-foto { cursor: zoom-in; }
+.monogram.tem-foto:active { transform: scale(0.94); }
+
+.foto-grande {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 26px;
+  background: rgba(35, 42, 28, 0.82);
+  animation: fundoEntra 0.22s ease both;
+}
+.foto-grande[hidden] { display: none; }
+
+@keyframes fundoEntra {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.foto-grande img {
+  max-width: min(92vw, 520px);
+  max-height: 72vh;
+  object-fit: contain;
+  /* moldura de papel pintado, a mesma dos cartões */
+  border: 18px solid transparent;
+  border-image: url("../img/mancha.webp") 34 fill / 18px stretch;
+  animation: fotoAbre 0.3s cubic-bezier(0.34, 1.4, 0.6, 1) both;
+}
+
+@keyframes fotoAbre {
+  from { opacity: 0; transform: scale(0.88); }
+  to   { opacity: 1; transform: none; }
+}
+
+.foto-grande-fechar {
+  background: none;
+  border: 1.5px solid rgba(247, 242, 233, 0.5);
+  color: var(--ivory);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 10px 26px;
+  border-radius: var(--corte-mini);
+  animation: nomeSobe 0.3s ease 0.1s both;
+}
+.foto-grande-fechar:active { transform: scale(0.96); }
+
 /* ---------- Bottom nav ---------- */
 
 .bottom-nav {

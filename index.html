@@ -19,6 +19,26 @@
 </head>
 <body>
 
+  <!-- Abertura: dura menos de um segundo. Duas poças de tinta se abrem, os
+       anéis entram e o painel se dissolve enquanto o app já aparece por trás.
+       Só transform e opacity, para o celular desenhar sem esforço. -->
+  <div class="abertura" id="abertura" aria-hidden="true">
+    <div class="abertura-pool pool-sage"></div>
+    <div class="abertura-pool pool-rose"></div>
+    <svg class="abertura-aneis" viewBox="94 96 344 306" width="150" height="134" aria-hidden="true">
+      <circle cx="216" cy="280" r="104" fill="none" stroke="#b3892e" stroke-width="20"/>
+      <circle cx="316" cy="280" r="104" fill="none" stroke="#c98a80" stroke-width="20"/>
+      <path d="M244 142l22-38 22 38" fill="none" stroke="#b3892e" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <p class="abertura-nome" id="abertura-nome">Nosso Casamento</p>
+  </div>
+
+  <!-- Foto do casal em tamanho grande, ao tocar no cabeçalho. -->
+  <div class="foto-grande" id="foto-grande" hidden>
+    <img id="foto-grande-img" alt="Foto do casal">
+    <button class="foto-grande-fechar" id="foto-grande-fechar" type="button" aria-label="Fechar foto">Fechar</button>
+  </div>
+
   <div class="login-screen" id="login-screen" hidden>
     <div class="login-card">
       <svg class="login-aneis" viewBox="0 0 512 512" width="72" height="72" aria-hidden="true">
@@ -55,7 +75,7 @@
 
   <header class="app-header">
     <div class="header-inner">
-      <div class="monogram" id="monogram">N&amp;N</div>
+      <button class="monogram" id="monogram" type="button" aria-label="Ver foto do casal">N&amp;N</button>
       <div class="header-names">
         <h1 id="header-couple">Nosso Casamento</h1>
         <p id="header-date">Configure a data do grande dia</p>

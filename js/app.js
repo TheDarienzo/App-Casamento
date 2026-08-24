@@ -6,7 +6,7 @@
 (() => {
   "use strict";
 
-  const VERSAO_APP = "21";
+  const VERSAO_APP = "22";
   const STORAGE_KEY = "nosso-casamento-v1";
   const CASAL_KEY = "nosso-casamento-casal";
   // bilhete de sessão assinado pelo servidor (substitui guardar o código do casal)
@@ -345,8 +345,12 @@
     const mono = $("#monogram");
     if (foto) {
       mono.innerHTML = `<img src="${escapeAttr(foto)}" alt="Foto do casal">`;
+      mono.classList.add("tem-foto");
+      mono.setAttribute("aria-label", "Ver foto do casal em tamanho grande");
     } else {
       mono.textContent = iniciaisCasal();
+      mono.classList.remove("tem-foto");
+      mono.setAttribute("aria-label", "Iniciais do casal");
     }
     $("#header-date").textContent = data
       ? new Date(data).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })
@@ -1952,6 +1956,50 @@
     renderNotas();
     atualizarContagem();
   }
+
+  /* ---------- foto do casal em tamanho grande ---------- */
+
+  const fotoGrande = $("#foto-grande");
+
+  function abrirFoto() {
+    const foto = state.config.foto;
+    if (!foto) return;
+    $("#foto-grande-img").src = foto;
+    fotoGrande.hidden = false;
+    $("#foto-grande-fechar").focus();
+  }
+
+  function fecharFoto() {
+    fotoGrande.hidden = true;
+    $("#foto-grande-img").src = "";
+    $("#monogram").focus();
+  }
+
+  $("#monogram").addEventListener("click", abrirFoto);
+  // clicar em qualquer lugar do fundo fecha
+  fotoGrande.addEventListener("click", fecharFoto);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !fotoGrande.hidden) fecharFoto();
+  });
+
+  /* ---------- abertura ---------- */
+
+  (function abertura() {
+    const painel = $("#abertura");
+    if (!painel) return;
+    // os nomes do casal já estão guardados no aparelho: dá para escrevê-los
+    // antes de a animação chegar neles
+    const { noiva, noivo } = state.config;
+    if (noiva.trim() || noivo.trim()) {
+      $("#abertura-nome").textContent = `${nomeNoiva()} & ${nomeNoivo()}`;
+    }
+    // tira o painel do caminho assim que ele termina de sumir
+    const some = () => painel.classList.add("fim");
+    painel.addEventListener("animationend", (e) => {
+      if (e.animationName === "aberturaSai") some();
+    });
+    setTimeout(some, 1600); // rede de segurança
+  })();
 
   preencherConfig();
   renderTudo();
