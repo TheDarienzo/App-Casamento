@@ -212,6 +212,10 @@ begin
 end;
 $$;
 
+-- ATENÇÃO: a versão em produção de salvar_estado tem, além do que está
+-- aqui, os limites de tamanho por campo e a validação da foto — veja
+-- 20260824_limites_por_campo.sql, que a redefine por cima desta.
+
 -- Só a API (service role) pode ler e gravar. Sem isto, qualquer pessoa com
 -- a chave pública do projeto poderia chamar estas funções direto pelo
 -- /rest/v1/rpc/, contornando a nossa API.
