@@ -6,7 +6,7 @@
 (() => {
   "use strict";
 
-  const VERSAO_APP = "18";
+  const VERSAO_APP = "19";
   const STORAGE_KEY = "nosso-casamento-v1";
   const CASAL_KEY = "nosso-casamento-casal";
 
