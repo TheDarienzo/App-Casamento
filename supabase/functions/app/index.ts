@@ -69,6 +69,21 @@ async function cors(req: Request): Promise<Record<string, string>> {
   };
 }
 
+// Anota de que endereço o app chama, para poder restringir o CORS a ele
+// depois sem ninguém ter de descobrir a URL na mão. Guarda no máximo 5.
+const origensAnotadas = new Set<string>();
+
+async function anotarOrigem(req: Request): Promise<void> {
+  const origem = req.headers.get("origin") ?? "";
+  if (!origem.startsWith("https://") || origensAnotadas.has(origem)) return;
+  origensAnotadas.add(origem);
+  const vistas = (await ajuste("origens_vistas")).split(",").filter(Boolean);
+  if (vistas.includes(origem)) return;
+  const nova = [...vistas, origem].slice(-5).join(",");
+  await supabase.from("configuracao").upsert({ chave: "origens_vistas", valor: nova });
+  cache.delete("origens_vistas");
+}
+
 // ---------- identificação de quem chama ----------
 
 // Guarda um resumo do endereço de rede, não o endereço em si: serve para
@@ -160,6 +175,9 @@ Deno.serve(async (req: Request) => {
   } catch {
     return json({ erro: "JSON inválido" }, 400);
   }
+
+  // não atrasa a resposta: só registra de onde veio
+  anotarOrigem(req).catch(() => {});
 
   const op = corpo.op;
   const usuario = String(corpo.usuario ?? "").trim();
