@@ -66,13 +66,16 @@ apagado_em    timestamptz                          -- soft delete
 - Valores em centavos (`bigint`), exibidos com `brl()`.
 - Sem dependências novas e sem etapa de build.
 - Desempenho: nada de filtro SVG, `backdrop-filter` ou
-  `background-attachment: fixed` em tempo de execução — texturas são
-  assadas em WebP por `scripts/` e o CSS só desenha o bitmap.
+  `background-attachment: fixed` em tempo de execução. Animação só com
+  `transform` e `opacity`. Já custou lentidão uma vez: o navegador
+  recalculava os filtros a cada redesenho.
+- Visual: marfim, verde-oliva, dourado e rosa-chá, cantos arredondados e
+  sombras suaves — Fraunces nos títulos e números, Karla no texto. Nada de
+  textura de aquarela nem fonte manuscrita (testado e rejeitado).
 
 ## Publicação
 
 `node scripts/subir-versao.mjs`, gerar o zip com `index.html`,
-`manifest.webmanifest`, `sw.js`, `_headers`, `css/`, `js/`, `icons/`,
-`img/*.webp`
-(os `.svg` de origem ficam fora), e subir no Cloudflare em
-*New deployment → Upload assets*. Detalhes em `PUBLICAR.md`.
+`manifest.webmanifest`, `sw.js`, `_headers`, `css/`, `js/` e `icons/`, e
+subir no Cloudflare em *New deployment → Upload assets*. O `_headers`
+precisa ficar na raiz do upload. Detalhes em `PUBLICAR.md`.

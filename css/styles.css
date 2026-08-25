@@ -24,20 +24,6 @@
   --nav-h: 64px;
   --font-display: "Fraunces", Georgia, "Times New Roman", serif;
   --font-body: "Karla", "Segoe UI", Tahoma, sans-serif;
-  --font-mao: "Parisienne", "Fraunces", cursive;
-  /* números anotados à mão, como num caderno de planejamento */
-  --font-conta: "Caveat", "Fraunces", cursive;
-
-  /* aquarela: contorno de pigmento e sombra de papel sobre papel */
-  --tinta-borda: rgba(125, 144, 112, 0.30);
-  --tinta-borda-forte: rgba(125, 144, 112, 0.5);
-  --papel: rgba(255, 253, 248, 0.88);
-  --sombra-papel: 0 1px 2px rgba(94, 84, 62, 0.06), 0 14px 26px -16px rgba(88, 100, 70, 0.45);
-  /* recorte irregular, como papel cortado à mão */
-  --corte: 22px 26px 20px 24px / 24px 20px 26px 22px;
-  --corte-mini: 14px 17px 13px 16px / 16px 13px 17px 14px;
-  /* mancha de tinta usada como moldura: o cartão vira um pedaço de papel pintado */
-  --mancha: url("../img/mancha.webp") 34 fill / 24px stretch;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -47,18 +33,11 @@ html { -webkit-text-size-adjust: 100%; }
 body {
   font-family: var(--font-body);
   color: var(--ink);
-  /* papel de algodão: fibra por cima, poças de tinta por baixo */
-  background-color: #f6f1e6;
+  background-color: var(--ivory);
   background-image:
-    url("../img/papel.webp"),
-    radial-gradient(46% 20% at 10% 3%, rgba(125, 144, 112, 0.13), transparent 70%),
-    radial-gradient(42% 16% at 94% 18%, rgba(196, 148, 138, 0.13), transparent 70%),
-    radial-gradient(44% 17% at 3% 44%, rgba(212, 180, 106, 0.11), transparent 70%),
-    radial-gradient(48% 19% at 90% 68%, rgba(125, 144, 112, 0.10), transparent 70%),
-    radial-gradient(40% 14% at 30% 92%, rgba(196, 148, 138, 0.09), transparent 72%);
-  background-repeat: repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
-  background-size: 160px 160px, auto, auto, auto, auto, auto;
-  background-attachment: scroll;
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(212, 180, 106, 0.18), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(201, 138, 128, 0.10), transparent 55%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
   min-height: 100vh;
   min-height: 100dvh;
   padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
@@ -74,12 +53,10 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
   position: sticky;
   top: 0;
   z-index: 20;
-  /* traço de pincel no lugar da linha reta */
-  background:
-    url("../img/traco.webp") bottom center / 100% 14px no-repeat,
-    #f4efe3;
-  border-bottom: none;
-  box-shadow: 0 8px 16px -14px rgba(88, 100, 70, 0.6);
+  background: rgba(247, 242, 233, 0.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(179, 137, 46, 0.25);
   padding-top: env(safe-area-inset-top, 0px);
 }
 
@@ -143,10 +120,9 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
 .header-names { flex: 1; min-width: 0; }
 
 .header-names h1 {
-  font-family: var(--font-mao);
-  font-weight: 400;
-  font-size: 1.6rem;
-  line-height: 1.1;
+  font-family: var(--font-display);
+  font-weight: 550;
+  font-size: 1.25rem;
   letter-spacing: 0.01em;
   white-space: nowrap;
   overflow: hidden;
@@ -188,23 +164,6 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
   to { opacity: 1; transform: none; }
 }
 
-/* o painel aparece como tinta secando: um pedaço de cada vez */
-@keyframes pincelada {
-  from { opacity: 0; transform: translateY(14px) rotate(-0.8deg); }
-  to { opacity: 1; transform: none; }
-}
-#view-dashboard > * { animation: pincelada 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
-#view-dashboard > *:nth-child(1) { animation-delay: 0.02s; }
-#view-dashboard > *:nth-child(2) { animation-delay: 0.10s; }
-#view-dashboard > *:nth-child(3) { animation-delay: 0.18s; }
-#view-dashboard > *:nth-child(4) { animation-delay: 0.26s; }
-#view-dashboard > *:nth-child(5) { animation-delay: 0.34s; }
-#view-dashboard > *:nth-child(n+6) { animation-delay: 0.42s; }
-
-@media (prefers-reduced-motion: reduce) {
-  #view-dashboard > * { animation: none; }
-}
-
 .view-head { margin-bottom: 16px; }
 
 .view-title {
@@ -219,90 +178,72 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
 /* ---------- Countdown ---------- */
 
 .countdown-card {
+  background:
+    radial-gradient(ellipse 120% 90% at 50% -20%, rgba(212, 180, 106, 0.35), transparent 55%),
+    linear-gradient(150deg, #33402c 0%, #24301f 100%);
   color: var(--ivory);
-  background: transparent;
-  border: 30px solid transparent;
-  border-image: url("../img/mancha-verde.webp") 34 fill / 30px stretch;
-  border-radius: 0;
-  padding: 0;
+  border-radius: 24px;
+  padding: 26px 20px 20px;
   text-align: center;
-  margin-bottom: 10px;
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(212, 180, 106, 0.4);
+  margin-bottom: 18px;
   position: relative;
+  overflow: hidden;
 }
 
-/* ramo de eucalipto pintado, saindo do canto */
+.countdown-card::before,
 .countdown-card::after {
   content: "";
   position: absolute;
-  right: -16px;
-  bottom: -18px;
-  width: 190px;
-  height: 70px;
-  background: url("../img/ramo.webp") center / contain no-repeat;
-  opacity: 0.5;
-  transform: rotate(-9deg);
-  pointer-events: none;
+  width: 120px;
+  height: 120px;
+  border: 1px solid rgba(212, 180, 106, 0.25);
+  border-radius: 50%;
 }
+.countdown-card::before { top: -60px; left: -40px; }
+.countdown-card::after { bottom: -70px; right: -30px; width: 160px; height: 160px; }
 
 .countdown-label {
-  font-family: var(--font-mao);
-  font-style: normal;
-  font-size: 1.7rem;
-  line-height: 1;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1rem;
   color: var(--gold-soft);
-  letter-spacing: 0.01em;
+  letter-spacing: 0.06em;
 }
 
 .countdown-grid {
   display: flex;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
   margin: 12px 0 10px;
 }
 
 .cd-unit {
-  min-width: 56px;
-  /* a folga lateral do número está no próprio .cd-num, para a caixa
-     crescer junto quando a contagem tiver mais algarismos */
-  background: rgba(255, 253, 248, 0.08);
-  border: 1px solid rgba(212, 180, 106, 0.28);
-  border-radius: var(--corte-mini);
+  min-width: 64px;
+  background: rgba(255, 253, 248, 0.07);
+  border: 1px solid rgba(212, 180, 106, 0.25);
+  border-radius: 14px;
   padding: 10px 6px 8px;
   display: flex;
   flex-direction: column;
 }
 
-/* A máscara de aquarela recorta o desenho na borda da caixa do elemento.
-   Estes números são escritos à mão, com traço que ultrapassa a largura da
-   letra — sem esta folga o último algarismo aparece cortado.
-   A folga entra como padding (e não margem negativa) de propósito: assim a
-   caixa em volta cresce junto e o número continua cabendo quando fica maior. */
-.dm-num,
-.cd-num,
-.cd-num.longo { font-size: 1.85rem; }
-
-.cd-lbl {
-  padding: 0 5px;
-}
-
-/* alinhado à esquerda: puxa só desse lado, para o número não deslocar */
-.stat-num {
-  padding: 0 5px;
-  margin-left: -5px;
-}
-
 .cd-num {
-  font-family: var(--font-conta);
-  font-weight: 700;
-  font-size: 2.4rem;
-  white-space: nowrap;
-  /* altura fixa: quando o número encolhe, os rótulos continuam alinhados */
-  min-height: 2.4rem;
-  display: grid;
-  place-items: center;
+  font-family: var(--font-display);
+  font-weight: 550;
+  font-size: 1.8rem;
   line-height: 1;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  /* altura fixa: quando o número encolhe, os rótulos continuam alinhados */
+  min-height: 1.8rem;
+  display: grid;
+  place-items: center;
 }
+
+/* contagem com 4 algarismos (acima de 2,7 anos): diminui para continuar cabendo */
+.cd-num.longo { font-size: 1.45rem; }
 
 .cd-lbl {
   font-size: 0.66rem;
@@ -330,41 +271,25 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
 }
 
 .stat-card {
-  position: relative;
-  background: transparent;
-  border: 24px solid transparent;
-  border-image: var(--mancha);
-  border-radius: 0;
-  padding: 0;
+  background: var(--paper);
+  border: 1px solid rgba(179, 137, 46, 0.18);
+  border-radius: var(--radius);
+  padding: 14px 16px;
   text-align: left;
+  box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
   gap: 1px;
-  transition: transform 0.18s;
+  transition: transform 0.15s, box-shadow 0.15s;
 }
-/* poça de pigmento que escorre do canto, como tinta secando no papel */
-.stat-card::before {
-  content: "";
-  position: absolute;
-  inset: 34% 12px 8px 12px;
-  background: radial-gradient(ellipse at 26% 120%, rgba(125, 144, 112, 0.34), transparent 58%);
-  pointer-events: none;
-}
-.stat-card > * { position: relative; }
-.stat-card:nth-child(2n)::before {
-  background: radial-gradient(ellipse at 74% 120%, rgba(196, 148, 138, 0.36), transparent 58%);
-}
-.stat-card:nth-child(3n+1) { transform: rotate(-0.35deg); }
-.stat-card:nth-child(3n+2) { transform: rotate(0.3deg); }
-.stat-card:active { transform: scale(0.97) rotate(-0.4deg); }
+.stat-card:active { transform: scale(0.97); }
 .stat-wide { grid-column: span 2; }
 
 .stat-num {
-  font-family: var(--font-conta);
-  font-weight: 700;
-  font-size: 2.3rem;
-  line-height: 1;
-  letter-spacing: 0.01em;
+  font-family: var(--font-display);
+  font-weight: 550;
+  font-size: 1.7rem;
+  line-height: 1.1;
   color: var(--ink);
 }
 
@@ -381,24 +306,12 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
 /* ---------- Cards ---------- */
 
 .card {
-  position: relative;
-  background: transparent;
-  border: 26px solid transparent;
-  border-image: var(--mancha);
-  border-radius: 0;
-  padding: 0;
-  margin-bottom: 6px;
-}
-/* respingo pálido no topo, como aguada aplicada antes do texto */
-.card::before {
-  content: "";
-  position: absolute;
-  top: 4px;
-  left: 8%;
-  right: 24%;
-  height: 54px;
-  background: radial-gradient(ellipse at 46% 130%, rgba(196, 148, 138, 0.26), transparent 60%);
-  pointer-events: none;
+  background: var(--paper);
+  border: 1px solid rgba(179, 137, 46, 0.18);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  box-shadow: var(--shadow);
+  margin-bottom: 16px;
 }
 
 .card-head {
@@ -413,18 +326,6 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
   font-family: var(--font-display);
   font-weight: 550;
   font-size: 1.15rem;
-  position: relative;
-}
-/* sublinhado de pincel: mais grosso no começo, some no fim */
-.card-head h2::after {
-  content: "";
-  position: absolute;
-  left: -2px;
-  right: -6px;
-  bottom: -4px;
-  height: 5px;
-  border-radius: 50% 40% 60% 45% / 100% 100% 100% 100%;
-  background: linear-gradient(90deg, rgba(179, 137, 46, 0.38), rgba(179, 137, 46, 0.16) 55%, transparent);
 }
 
 .card-head-value {
@@ -437,24 +338,19 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
 .card-text { font-size: 0.88rem; color: var(--ink-soft); margin-bottom: 12px; }
 
 .progress-track {
-  height: 13px;
-  border-radius: 8px 10px 9px 11px / 10px 8px 11px 9px;
-  background: rgba(125, 144, 112, 0.13);
-  box-shadow: inset 0 1px 2px rgba(94, 84, 62, 0.07);
+  height: 10px;
+  border-radius: 99px;
+  background: var(--ivory-deep);
   overflow: hidden;
   margin-bottom: 10px;
 }
 
-/* pincelada: a tinta acumula na ponta e clareia no meio do traço */
 .progress-fill {
   height: 100%;
   width: 0%;
-  border-radius: 8px 12px 10px 9px / 10px 9px 12px 8px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.28), transparent 45%, rgba(60, 72, 48, 0.16)),
-    linear-gradient(90deg, #7d9070 0%, #93a37f 42%, #c9a54e 100%);
-  box-shadow: inset -3px 0 5px -2px rgba(60, 72, 48, 0.35);
-  transition: width 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--sage) 0%, var(--gold-soft) 100%);
+  transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.84rem; color: var(--ink-soft); }
@@ -469,21 +365,14 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
 
 .split-bar {
   display: flex;
-  height: 16px;
-  border-radius: 9px 12px 10px 11px / 11px 9px 12px 10px;
+  height: 14px;
+  border-radius: 99px;
   overflow: hidden;
-  background: rgba(125, 144, 112, 0.12);
-  box-shadow: inset 0 1px 2px rgba(94, 84, 62, 0.07);
+  background: var(--ivory-deep);
   margin-bottom: 10px;
 }
-.split-noiva,
-.split-noivo {
-  transition: width 0.9s cubic-bezier(0.22, 1, 0.36, 1);
-  box-shadow: inset 0 -3px 5px -3px rgba(60, 50, 40, 0.4);
-}
-/* as duas aguadas se encontram no meio e sangram uma na outra */
-.split-noiva { background: linear-gradient(90deg, #d3a79b 0%, #c4948a 88%, rgba(196, 148, 138, 0.55) 100%); }
-.split-noivo { background: linear-gradient(90deg, rgba(125, 144, 112, 0.55) 0%, #7d9070 12%, #8c9d78 100%); }
+.split-noiva { background: var(--rose); transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+.split-noivo { background: var(--sage); transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
 
 .dash-mini {
   display: grid;
@@ -492,26 +381,24 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
   margin: 2px 0 12px;
 }
 .dash-mini-item {
-  background: rgba(247, 242, 231, 0.75);
-  border: 1px solid rgba(125, 144, 112, 0.22);
-  border-radius: var(--corte-mini);
+  background: var(--ivory);
+  border: 1px solid rgba(179, 137, 46, 0.14);
+  border-radius: 12px;
   padding: 9px 6px;
   text-align: center;
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
-.dash-mini-item:nth-child(3n+1) { transform: rotate(-0.5deg); }
-.dash-mini-item:nth-child(3n) { transform: rotate(0.5deg); }
 .dm-num {
-  font-family: var(--font-conta);
-  font-weight: 700;
-  font-size: 1.65rem;
+  font-family: var(--font-display);
+  font-weight: 550;
+  font-size: 1.25rem;
   line-height: 1;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
-.dm-num.dm-money { font-family: var(--font-display); font-weight: 550; font-size: 0.95rem; }
+.dm-num.dm-money { font-size: 0.95rem; }
 .dm-ok { color: var(--ok); }
 .dm-pend { color: var(--gold); }
 .dm-ganho { color: var(--rose); }
@@ -540,100 +427,21 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
   gap: 10px;
   font-size: 0.88rem;
   padding: 7px 0;
-  border-top: 1px solid rgba(125, 144, 112, 0.22);
+  border-top: 1px dashed rgba(179, 137, 46, 0.25);
   color: var(--ink-soft);
 }
 .mini-list li:first-child { border-top: none; }
 .mini-list .mini-valor { color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
-/* ---------- Prazo das tarefas ----------
-   Etiqueta com o tempo que falta: dourada quando está chegando,
-   vermelha quando já passou, discreta quando ainda há folga. */
-.prazo-selo {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.74rem;
-  font-weight: 700;
-  line-height: 1;
-  padding: 4px 9px;
-  border-radius: var(--corte-mini);
-  border: 1px solid transparent;
-  white-space: nowrap;
-}
-.prazo-selo::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-  opacity: 0.75;
-}
-.prazo-ok {
-  color: var(--ink-soft);
-  background: rgba(125, 144, 112, 0.13);
-  border-color: rgba(125, 144, 112, 0.26);
-}
-.prazo-perto {
-  color: #8a6714;
-  background: rgba(212, 180, 106, 0.28);
-  border-color: rgba(179, 137, 46, 0.4);
-}
-.prazo-vencido {
-  color: #8d3a29;
-  background: rgba(201, 138, 128, 0.26);
-  border-color: rgba(176, 80, 60, 0.42);
-}
-.prazo-feito {
-  color: var(--ink-faint);
-  background: rgba(125, 144, 112, 0.1);
-  border-color: rgba(125, 144, 112, 0.2);
-}
-.prazo-feito::before { display: none; }
-.prazo-sem {
-  color: var(--ink-faint);
-  background: transparent;
-  border-color: rgba(139, 145, 127, 0.3);
-}
-.prazo-sem::before { display: none; }
-.list-item.is-done .prazo-selo { opacity: 0.7; }
-
-/* campo de data no formulário e na edição */
-.field-prazo input[type="date"] {
-  width: auto;
-  min-width: 116px;
-  font-family: var(--font-body);
-  font-size: 0.9rem;
-  color: var(--ink);
-  padding: 9px 0;
-}
-.field-prazo input[type="date"]::-webkit-calendar-picker-indicator {
-  opacity: 0.55;
-  cursor: pointer;
-}
-.edit-linha { display: flex; gap: 8px; flex-wrap: wrap; }
-.btn-largo { flex: 1; }
-
-/* painel: nome ocupa o espaço livre, prazo e valor ficam à direita */
-.mini-list li { align-items: center; }
-.mini-nome {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.dash-list-titulo.tem-atraso { color: #8d3a29; }
-
 /* ---------- Forms ---------- */
 
 .form-card {
-  background: transparent;
-  border: 24px solid transparent;
-  border-image: var(--mancha);
-  border-radius: 0;
-  padding: 0;
-  margin-bottom: 4px;
+  background: var(--paper);
+  border: 1px solid rgba(179, 137, 46, 0.18);
+  border-radius: var(--radius);
+  padding: 14px;
+  box-shadow: var(--shadow);
+  margin-bottom: 14px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -954,10 +762,10 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
 .filter-row::-webkit-scrollbar { display: none; }
 
 .chip {
-  border: 1.5px solid rgba(125, 144, 112, 0.28);
-  background: var(--papel);
+  border: 1.5px solid var(--ivory-deep);
+  background: var(--paper);
   color: var(--ink-soft);
-  border-radius: 13px 16px 12px 15px / 15px 12px 16px 13px;
+  border-radius: 99px;
   padding: 7px 15px;
   font-size: 0.82rem;
   font-weight: 700;
@@ -975,9 +783,9 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
 .item-list, .pair-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
 
 .list-item {
-  background: var(--papel);
-  border: 1px solid var(--tinta-borda);
-  border-radius: var(--corte-mini);
+  background: var(--paper);
+  border: 1px solid rgba(179, 137, 46, 0.18);
+  border-radius: var(--radius);
   padding: 12px 14px;
   display: flex;
   align-items: center;
@@ -1001,16 +809,6 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
   white-space: nowrap;
 }
 
-/* tarefa com prazo: o nome pode ocupar duas linhas em vez de ser cortado,
-   já que a etiqueta de prazo abaixo dele já ocupa a segunda linha */
-.list-item:has(.prazo-selo) .item-title {
-  white-space: normal;
-  overflow-wrap: anywhere;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
 .item-meta { font-size: 0.78rem; color: var(--ink-faint); display: flex; gap: 8px; flex-wrap: wrap; }
 
 .item-valor {
@@ -1022,12 +820,7 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
 }
 
 .list-item.is-done .item-title { text-decoration: line-through; color: var(--ink-faint); }
-.list-item.is-done {
-  background:
-    radial-gradient(ellipse 90% 120% at 12% 50%, rgba(125, 144, 112, 0.26), rgba(125, 144, 112, 0.10) 60%, rgba(125, 144, 112, 0.05)),
-    var(--papel);
-  border-color: rgba(125, 144, 112, 0.42);
-}
+.list-item.is-done { background: var(--sage-soft); border-color: rgba(125, 144, 112, 0.4); }
 .list-item.is-done .item-valor { color: var(--ok); }
 
 .badge {
@@ -1172,150 +965,104 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
 }
 .toast.is-visible { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-/* ---------- Tinta nas letras ----------
-   As letras e números recebem a mesma aguada dos cartões: um véu recortado
-   por cima deixa o pigmento mais denso em umas partes e mais lavado em
-   outras, sem mexer na cor de cada um. Onde o navegador não souber
-   recortar, o texto continua cheio como sempre. */
-.stat-num,
-.stat-lbl,
-.card-head h2,
-.card-head-value,
-.dm-num,
-.dm-lbl,
-.dash-list-titulo,
-.mini-list .mini-valor,
-.legend b,
-.view-title,
-.header-names h1,
-.countdown-label,
-.cd-num,
-.cd-lbl {
-  -webkit-mask-image: url("../img/veladura.webp");
-  mask-image: url("../img/veladura.webp");
-  -webkit-mask-size: 130px 90px;
-  mask-size: 130px 90px;
-  -webkit-mask-repeat: repeat;
-  mask-repeat: repeat;
-  /* cada elemento começa num ponto diferente da mancha (ver regras abaixo) */
-}
-
-/* halo de tinta úmida em volta dos traços mais grossos */
-.stat-num,
-.view-title,
-.card-head h2,
-.header-names h1 { text-shadow: 0 0 1.6px rgba(47, 58, 42, 0.34); }
-.cd-num,
-.countdown-label { text-shadow: 0 0 1.6px rgba(14, 20, 10, 0.45); }
-
-/* variação entre elementos vizinhos, para nenhum ficar igual ao outro */
-.stat-card:nth-child(2n) .stat-num { -webkit-mask-position: 47px 21px; mask-position: 47px 21px; }
-.stat-card:nth-child(3n) .stat-num { -webkit-mask-position: 19px 58px; mask-position: 19px 58px; }
-.stat-card:nth-child(2n) .stat-lbl { -webkit-mask-position: 71px 13px; mask-position: 71px 13px; }
-.cd-unit:nth-child(2n) .cd-num { -webkit-mask-position: 41px 29px; mask-position: 41px 29px; }
-.cd-unit:nth-child(3n) .cd-num { -webkit-mask-position: 83px 47px; mask-position: 83px 47px; }
-
-/* ---------- Ícones ----------
-   Traço arredondado em vez de filtro em tempo real: o desenho continua
-   macio e o celular não precisa recalcular nada a cada rolagem. */
-.app-header svg,
-.bottom-nav svg,
-.card svg,
-.stat-card svg,
-.busca-icone,
-.list-item svg,
-.pair-list svg {
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-/* ---------- Abertura ----------
-   Menos de um segundo: as poças de tinta abrem, os anéis entram e o painel
-   se dissolve enquanto o painel do app já aparece por baixo. Só transform e
-   opacity — nada que obrigue o celular a recalcular desenho. */
-
-.abertura {
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-  display: grid;
-  place-items: center;
-  align-content: center;
-  gap: 14px;
-  background-color: #f6f1e6;
-  background-image: url("../img/papel.webp");
-  background-size: 160px 160px;
-  overflow: hidden;
-  animation: aberturaSai 0.42s cubic-bezier(0.4, 0, 0.9, 0.3) 0.6s both;
-}
-.abertura.fim { display: none; }
-
-@keyframes aberturaSai {
-  to { opacity: 0; transform: scale(1.04); }
-}
-
-/* poça de pigmento que se abre no papel */
-.abertura-pool {
-  position: absolute;
-  width: 74vmax;
-  height: 74vmax;
-  border-radius: 50%;
-  opacity: 0;
-  will-change: transform, opacity;
-}
-.pool-sage {
-  background: radial-gradient(circle, rgba(125, 144, 112, 0.5) 0%, rgba(125, 144, 112, 0.22) 42%, transparent 68%);
-  animation: pocaAbre 0.95s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-.pool-rose {
-  background: radial-gradient(circle, rgba(196, 148, 138, 0.45) 0%, rgba(196, 148, 138, 0.2) 42%, transparent 68%);
-  animation: pocaAbre 0.95s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
-  transform-origin: 60% 55%;
-}
-
-@keyframes pocaAbre {
-  0%   { opacity: 0;    transform: scale(0.28); }
-  35%  { opacity: 0.95; }
-  100% { opacity: 0;    transform: scale(1.5); }
-}
-
-/* os anéis entram com um respiro, como quem assenta o pincel */
-.abertura-aneis {
-  position: relative;
-  width: 150px;
-  height: 134px;
-  animation: aneisEntram 0.62s cubic-bezier(0.34, 1.5, 0.5, 1) 0.08s both;
-  will-change: transform, opacity;
-}
-
-@keyframes aneisEntram {
-  from { opacity: 0; transform: scale(0.62) rotate(-8deg); }
-  to   { opacity: 1; transform: none; }
-}
-
-.abertura-nome {
-  position: relative;
-  font-family: var(--font-mao);
-  font-size: 2.1rem;
+/* ---------- Prazo das tarefas ----------
+   Etiqueta com o tempo que falta: dourada quando está chegando,
+   vermelha quando já passou, discreta quando ainda há folga. */
+.prazo-selo {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.74rem;
+  font-weight: 700;
   line-height: 1;
+  padding: 4px 9px;
+  border-radius: 99px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.prazo-selo::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.75;
+}
+.prazo-ok {
+  color: var(--ink-soft);
+  background: var(--sage-soft);
+  border-color: rgba(125, 144, 112, 0.3);
+}
+.prazo-perto {
+  color: #8a6714;
+  background: rgba(212, 180, 106, 0.26);
+  border-color: rgba(179, 137, 46, 0.4);
+}
+.prazo-vencido {
+  color: #8d3a29;
+  background: var(--rose-soft);
+  border-color: rgba(176, 80, 60, 0.4);
+}
+.prazo-feito {
+  color: var(--ink-faint);
+  background: var(--ivory-deep);
+  border-color: rgba(139, 145, 127, 0.28);
+}
+.prazo-feito::before { display: none; }
+.prazo-sem {
+  color: var(--ink-faint);
+  background: transparent;
+  border-color: rgba(139, 145, 127, 0.3);
+}
+.prazo-sem::before { display: none; }
+.list-item.is-done .prazo-selo { opacity: 0.7; }
+
+/* tarefa com prazo: o nome pode ocupar duas linhas em vez de ser cortado,
+   já que a etiqueta abaixo dele já ocupa a segunda linha */
+.list-item:has(.prazo-selo) .item-title {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* campo de data no formulário e na edição */
+.field-prazo input[type="date"] {
+  width: auto;
+  min-width: 116px;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
   color: var(--ink);
-  text-align: center;
-  padding: 0 24px;
-  animation: nomeSobe 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.26s both;
+  padding: 9px 0;
 }
+.field-prazo input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0.55;
+  cursor: pointer;
+}
+.edit-linha { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn-largo { flex: 1; }
 
-@keyframes nomeSobe {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: none; }
+/* painel: nome ocupa o espaço livre, prazo e valor ficam à direita */
+.mini-list li { align-items: center; }
+.mini-nome {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .abertura { display: none; }
-}
+.dash-list-titulo.tem-atraso { color: #8d3a29; }
 
 /* ---------- Foto do casal em tamanho grande ---------- */
 
-.monogram { border: 1.5px solid var(--gold-soft); padding: 0; }
+/* o monograma virou botão: tira a aparência de botão do navegador */
+.monogram {
+  padding: 0;
+  font-size: 1.05rem;
+  -webkit-appearance: none;
+  appearance: none;
+}
 .monogram.tem-foto { cursor: zoom-in; }
 .monogram.tem-foto:active { transform: scale(0.94); }
 
@@ -1336,22 +1083,22 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
 
 @keyframes fundoEntra {
   from { opacity: 0; }
-  to   { opacity: 1; }
+  to { opacity: 1; }
 }
 
 .foto-grande img {
   max-width: min(94vw, 700px);
   max-height: 74vh;
   object-fit: contain;
-  /* moldura de papel pintado, a mesma dos cartões */
-  border: 18px solid transparent;
-  border-image: url("../img/mancha.webp") 34 fill / 18px stretch;
+  border-radius: var(--radius);
+  border: 5px solid var(--paper);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
   animation: fotoAbre 0.3s cubic-bezier(0.34, 1.4, 0.6, 1) both;
 }
 
 @keyframes fotoAbre {
   from { opacity: 0; transform: scale(0.88); }
-  to   { opacity: 1; transform: none; }
+  to { opacity: 1; transform: none; }
 }
 
 .foto-grande-fechar {
@@ -1363,10 +1110,91 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
   letter-spacing: 0.06em;
   text-transform: uppercase;
   padding: 10px 26px;
-  border-radius: var(--corte-mini);
-  animation: nomeSobe 0.3s ease 0.1s both;
+  border-radius: 99px;
+  animation: sobeSuave 0.3s ease 0.1s both;
 }
 .foto-grande-fechar:active { transform: scale(0.96); }
+
+/* ---------- Abertura ----------
+   Menos de um segundo: um brilho suave se abre, os anéis entram e o painel
+   se dissolve enquanto o app já aparece por baixo. Só transform e opacity. */
+
+.abertura {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 16px;
+  background: var(--ivory);
+  overflow: hidden;
+  animation: aberturaSai 0.42s cubic-bezier(0.4, 0, 0.9, 0.3) 0.6s both;
+}
+.abertura.fim { display: none; }
+
+@keyframes aberturaSai {
+  to { opacity: 0; transform: scale(1.04); }
+}
+
+.abertura-pool {
+  position: absolute;
+  width: 74vmax;
+  height: 74vmax;
+  border-radius: 50%;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.pool-sage {
+  background: radial-gradient(circle, rgba(125, 144, 112, 0.28) 0%, rgba(125, 144, 112, 0.1) 45%, transparent 68%);
+  animation: brilhoAbre 0.95s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.pool-rose {
+  background: radial-gradient(circle, rgba(201, 138, 128, 0.24) 0%, rgba(201, 138, 128, 0.09) 45%, transparent 68%);
+  animation: brilhoAbre 0.95s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
+  transform-origin: 60% 55%;
+}
+
+@keyframes brilhoAbre {
+  0% { opacity: 0; transform: scale(0.28); }
+  35% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.5); }
+}
+
+.abertura-aneis {
+  position: relative;
+  width: 150px;
+  height: 134px;
+  animation: aneisEntram 0.62s cubic-bezier(0.34, 1.5, 0.5, 1) 0.08s both;
+  will-change: transform, opacity;
+}
+
+@keyframes aneisEntram {
+  from { opacity: 0; transform: scale(0.62) rotate(-8deg); }
+  to { opacity: 1; transform: none; }
+}
+
+.abertura-nome {
+  position: relative;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 1.7rem;
+  line-height: 1.1;
+  color: var(--ink);
+  text-align: center;
+  padding: 0 24px;
+  animation: sobeSuave 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.26s both;
+}
+
+@keyframes sobeSuave {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .abertura { display: none; }
+}
 
 /* ---------- Bottom nav ---------- */
 
@@ -1376,10 +1204,10 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
   left: 0;
   right: 0;
   z-index: 30;
-  background:
-    url("../img/traco.webp") top center / 100% 14px no-repeat,
-    #fbf8f1;
-  border-top: none;
+  background: rgba(255, 253, 248, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(179, 137, 46, 0.25);
   display: flex;
   justify-content: space-around;
   gap: 1px;
@@ -1468,9 +1296,9 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
 }
 .busca-wrap input {
   width: 100%;
-  border: 1.5px solid rgba(125, 144, 112, 0.28);
-  background: var(--papel);
-  border-radius: 16px 20px 15px 18px / 18px 15px 20px 16px;
+  border: 1.5px solid var(--ivory-deep);
+  background: var(--paper);
+  border-radius: 99px;
   padding: 10px 14px 10px 38px;
   font-size: 0.9rem;
   appearance: none;

@@ -6,7 +6,7 @@
 (() => {
   "use strict";
 
-  const VERSAO_APP = "24";
+  const VERSAO_APP = "25";
   const STORAGE_KEY = "nosso-casamento-v1";
   const CASAL_KEY = "nosso-casamento-casal";
   // bilhete de sessão assinado pelo servidor (substitui guardar o código do casal)
