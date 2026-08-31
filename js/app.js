@@ -6,7 +6,7 @@
 (() => {
   "use strict";
 
-  const VERSAO_APP = "25";
+  const VERSAO_APP = "26";
   const STORAGE_KEY = "nosso-casamento-v1";
   const CASAL_KEY = "nosso-casamento-casal";
   // bilhete de sessão assinado pelo servidor (substitui guardar o código do casal)
@@ -215,6 +215,14 @@
     if (resolvido) return `<span class="prazo-selo prazo-feito">${prazoCurto(prazo)}</span>`;
     return `<span class="prazo-selo ${prazoClasse(dias)}" title="Prazo: ${prazoCurto(prazo)}">${escapeHtml(prazoTexto(dias, curto))}</span>`;
   }
+
+  // Ordem alfabética do português: "Ângela" fica junto de "Angela", e
+  // maiúscula não muda o lugar. numeric faz "Taça 2" vir antes de "Taça 10".
+  const porNome = (campo) => (a, b) =>
+    String(a[campo] || "").localeCompare(String(b[campo] || ""), "pt-BR", {
+      sensitivity: "base",
+      numeric: true,
+    });
 
   // mais urgente primeiro; sem prazo vai para o fim
   const porUrgencia = (a, b) => {
@@ -501,12 +509,14 @@
     const conv = state.convidados;
 
     const termo = termoDe("convidados");
-    const filtrados = conv.filter((c) => {
-      if (filtroConvidados === "noiva" && c.lado !== "noiva") return false;
-      if (filtroConvidados === "noivo" && c.lado !== "noivo") return false;
-      if (filtroConvidados === "confirmados" && !c.confirmado) return false;
-      return combina(termo, c.nome);
-    });
+    const filtrados = conv
+      .filter((c) => {
+        if (filtroConvidados === "noiva" && c.lado !== "noiva") return false;
+        if (filtroConvidados === "noivo" && c.lado !== "noivo") return false;
+        if (filtroConvidados === "confirmados" && !c.confirmado) return false;
+        return combina(termo, c.nome);
+      })
+      .sort(porNome("nome"));
 
     lista.innerHTML = filtrados
       .map((c) => {

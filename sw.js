@@ -3,7 +3,7 @@
    quando há internet, para abrir já na versão mais nova. O cache fica como
    reserva para funcionar offline. Ícones e fontes seguem vindo do cache. */
 
-const VERSAO = "25";
+const VERSAO = "26";
 const CACHE = "nosso-casamento-v" + VERSAO;
 
 const SHELL = [
