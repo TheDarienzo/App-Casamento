@@ -6,7 +6,7 @@
 (() => {
   "use strict";
 
-  const VERSAO_APP = "26";
+  const VERSAO_APP = "27";
   const STORAGE_KEY = "nosso-casamento-v1";
   const CASAL_KEY = "nosso-casamento-casal";
   // bilhete de sessão assinado pelo servidor (substitui guardar o código do casal)
@@ -52,6 +52,9 @@
   }
 
   function salvar() {
+    // cada alteração local avança a revisão: é assim que o envio descobre,
+    // ao receber a resposta, se algo mudou aqui enquanto ela vinha
+    revisaoLocal++;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch {
@@ -1529,6 +1532,51 @@
   let syncTimer;
   let syncPendente = false;   // um envio falhou; há mudanças locais não salvas
   let envioPendente = false;  // há um envio agendado (debounce) esperando
+  let enviando = false;       // há um envio em voo, esperando resposta
+  let reenviar = false;       // mudou algo durante o envio: manda de novo
+  let revisaoLocal = 0;       // sobe a cada alteração feita neste aparelho
+
+  // Compara dois estados sem depender da ordem dos itens nem da ordem das
+  // chaves de cada item: o servidor devolve as duas em ordem própria, e sem
+  // isto o app se achava desatualizado a cada resposta e redesenhava à toa.
+  const impressao = (item) =>
+    item && typeof item === "object"
+      ? JSON.stringify(item, Object.keys(item).sort())
+      : JSON.stringify(item);
+  const impressaoLista = (lista) => (lista || []).map(impressao).sort().join("|");
+  const estadosDiferem = (a, b) =>
+    LISTAS.some((lista) => impressaoLista(a[lista]) !== impressaoLista(b[lista])) ||
+    impressao(a.config || {}) !== impressao(b.config || {});
+
+  // Última versão que sabemos estar no servidor. Serve de referência para
+  // descobrir o que mudou aqui — e é sempre a resposta do servidor, nunca o
+  // que julgamos ter mandado, para refletir qualquer ajuste que ele faça.
+  let baseSincronizada = null;
+
+  const copiar = (o) => JSON.parse(JSON.stringify(o));
+
+  // Manda só o que mudou neste aparelho.
+  //
+  // Antes ia o cadastro inteiro a cada salvamento, inclusive os registros que
+  // este celular nem tocou — e eles sobrescreviam o que o outro celular tinha
+  // acabado de alterar. Com dois ou três aparelhos abertos, quem salvasse por
+  // último desfazia a alteração do outro.
+  //
+  // O servidor grava o que chega e não apaga o que não veio, então enviar só
+  // a diferença é seguro: cada aparelho mexe apenas no que ele mesmo mudou.
+  function estadoParaEnviar() {
+    if (!baseSincronizada) return state; // primeira vez: manda tudo
+    const saida = { apagados: state.apagados || [] };
+    if (impressao(state.config || {}) !== impressao(baseSincronizada.config || {})) {
+      saida.config = state.config;
+    }
+    for (const lista of LISTAS) {
+      const antes = new Map((baseSincronizada[lista] || []).map((x) => [x.id, impressao(x)]));
+      const mudados = (state[lista] || []).filter((x) => antes.get(x.id) !== impressao(x));
+      if (mudados.length) saida[lista] = mudados;
+    }
+    return saida;
+  }
   let ultimoAtualizadoEm = null; // carimbo da última versão vista da nuvem
 
   async function api(corpo) {
@@ -1561,20 +1609,35 @@
 
   async function enviarAgora() {
     if (!temSessao()) return;
+    // um envio de cada vez: dois em voo podem chegar fora de ordem e a
+    // resposta mais velha desfazer a alteração mais nova
+    if (enviando) {
+      reenviar = true;
+      return;
+    }
     clearTimeout(syncTimer);
+    enviando = true;
     envioPendente = false;
+    const revisaoEnviada = revisaoLocal;
     try {
-      const r = await api({ op: "salvar", ...credencial(), estado: state });
+      const r = await api({ op: "salvar", ...credencial(), estado: estadoParaEnviar() });
       // guarda o carimbo da nossa própria escrita para o polling não
       // reaplicar os mesmos dados como se fossem novidade
       if (r && r.atualizado_em) ultimoAtualizadoEm = r.atualizado_em;
-      // o servidor devolve tudo somado (o nosso + o que o outro celular
-      // cadastrou): aplica se trouxe novidade e nada está sendo editado
-      if (r && r.estado && !editandoId && !notaEditando) {
-        const trouxeNovidade = LISTAS.some(
-          (lista) => JSON.stringify(r.estado[lista] || []) !== JSON.stringify(state[lista] || [])
-        );
-        if (trouxeNovidade) {
+      // a base é o que o servidor confirma ter, não o que achamos ter mandado
+      if (r && r.estado) baseSincronizada = copiar(r.estado);
+
+      // Se alguém mexeu no app enquanto a resposta vinha, o que está aqui é
+      // mais novo do que o que o servidor devolveu. Aplicar a resposta agora
+      // desfaria essa alteração — e o envio seguinte gravaria o desfazimento.
+      // Então mantém o que temos e manda de novo.
+      const mudouDurante = revisaoLocal !== revisaoEnviada;
+      if (mudouDurante) {
+        reenviar = true;
+      } else if (r && r.estado && !editandoId && !notaEditando) {
+        // o servidor devolve tudo somado (o nosso + o que o outro celular
+        // cadastrou): aplica só se realmente trouxe novidade
+        if (estadosDiferem(r.estado, state)) {
           state = { ...estadoInicial(), ...r.estado, config: { ...estadoInicial().config, ...(r.estado.config || {}) } };
           try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
           preencherConfig();
@@ -1584,13 +1647,20 @@
       syncPendente = false;
     } catch (e) {
       if (e.status === 404) {
-        guardarCasal("");
+        guardarCasal("", "");
         toast("A conta foi desconectada; entre novamente.");
       } else {
+        // não deu para gravar agora: fica marcado e o app tenta de novo
         syncPendente = true;
       }
+    } finally {
+      enviando = false;
     }
     renderSync();
+    if (reenviar) {
+      reenviar = false;
+      agendarEnvio();
+    }
   }
 
   // Verifica a nuvem periodicamente e aplica se o OUTRO celular mudou algo.
@@ -1600,18 +1670,23 @@
   // qualquer campo em foco travava a sincronização, e o app deixa o cursor
   // no campo de nome logo depois de cadastrar alguém).
   async function puxarSeMudou() {
-    if (!temSessao() || envioPendente || syncPendente) return;
+    if (!temSessao() || enviando || envioPendente || syncPendente) return;
     if (editandoId || notaEditando) return; // não sobrescreve algo sendo editado
     if (document.visibilityState !== "visible") return;
     const ativo = document.activeElement;
     if (ativo && ativo.closest && ativo.closest("#form-config")) return;
     try {
+      const revisaoAoBuscar = revisaoLocal;
       const r = await api({ op: "estado", ...credencial() });
       if (!r || !r.atualizado_em || r.atualizado_em === ultimoAtualizadoEm) return;
-      // reconfirma que nada começou a ser editado durante a busca
-      if (envioPendente || syncPendente) return;
+      // Reconfirma que nada mudou aqui durante a busca. Se mudou, o nosso é
+      // mais novo: não sobrescreve, deixa o envio levar a alteração.
+      if (revisaoLocal !== revisaoAoBuscar) return;
+      if (enviando || envioPendente || syncPendente) return;
+      if (editandoId || notaEditando) return;
       ultimoAtualizadoEm = r.atualizado_em;
       const nuvem = r.estado || {};
+      baseSincronizada = copiar(nuvem);
       state = { ...estadoInicial(), ...nuvem, config: { ...estadoInicial().config, ...(nuvem.config || {}) } };
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
       preencherConfig();
@@ -1620,7 +1695,15 @@
     } catch {}
   }
 
-  setInterval(puxarSeMudou, 7000);
+  setInterval(() => {
+    // Um envio que falhou (rede caiu no meio) ficava esperando a próxima
+    // alteração para ser tentado de novo — podia ficar parado para sempre.
+    if (syncPendente && !enviando) {
+      enviarAgora();
+      return;
+    }
+    puxarSeMudou();
+  }, 7000);
 
   function guardarCasal(codigo, bilhete) {
     casal = codigo;
@@ -1962,12 +2045,13 @@
     if (!temSessao()) return;
     if (document.visibilityState === "hidden") {
       // envia imediatamente o que estiver pendente ao sair do app
-      if (envioPendente || syncPendente) {
+      // inclui o envio em voo: fechar o app pode cancelar o fetch no meio
+      if (enviando || envioPendente || syncPendente) {
         clearTimeout(syncTimer);
         try {
           navigator.sendBeacon(
             API_URL,
-            new Blob([JSON.stringify({ op: "salvar", ...credencial(), estado: state })], { type: "text/plain;charset=UTF-8" })
+            new Blob([JSON.stringify({ op: "salvar", ...credencial(), estado: estadoParaEnviar() })], { type: "text/plain;charset=UTF-8" })
           );
         } catch {}
       }
