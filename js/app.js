@@ -6,7 +6,7 @@
 (() => {
   "use strict";
 
-  const VERSAO_APP = "27";
+  const VERSAO_APP = "28";
   const STORAGE_KEY = "nosso-casamento-v1";
   const CASAL_KEY = "nosso-casamento-casal";
   // bilhete de sessão assinado pelo servidor (substitui guardar o código do casal)
@@ -170,6 +170,39 @@
 
   const valorParaCampo = (centavos) => (centavos ? (centavos / 100).toFixed(2).replace(".", ",") : "");
 
+  // Soma meses respeitando o tamanho de cada um: 31 de janeiro mais um mês
+  // vira 28 de fevereiro, e não 3 de março como o padrão do navegador faria.
+  function somarMeses(data, meses) {
+    const d = new Date(data.getTime());
+    const dia = d.getDate();
+    d.setDate(1);
+    d.setMonth(d.getMonth() + meses);
+    const ultimoDia = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    d.setDate(Math.min(dia, ultimoDia));
+    return d;
+  }
+
+  // Meses inteiros de calendário até a data, e os dias que sobram depois
+  // deles — não é dias ÷ 30, porque os meses têm tamanhos diferentes.
+  function mesesEDias(agora, alvo) {
+    let meses =
+      (alvo.getFullYear() - agora.getFullYear()) * 12 + (alvo.getMonth() - agora.getMonth());
+    if (somarMeses(agora, meses) > alvo) meses--;
+    const marco = somarMeses(agora, Math.max(0, meses));
+    return {
+      meses: Math.max(0, meses),
+      dias: Math.max(0, Math.floor((alvo - marco) / 864e5)),
+    };
+  }
+
+  function textoMeses(agora, alvo) {
+    const { meses, dias } = mesesEDias(agora, alvo);
+    if (meses === 0) return "menos de um mês";
+    const m = `${meses} ${meses === 1 ? "mês" : "meses"}`;
+    if (dias === 0) return m;
+    return `${m} e ${dias} ${dias === 1 ? "dia" : "dias"}`;
+  }
+
   // Quantos dias faltam até o prazo. Compara só as datas, sem as horas,
   // para que "hoje" continue sendo hoje até a meia-noite.
   function diasAte(prazo) {
@@ -299,6 +332,7 @@
     const cartao = $(".countdown-card");
     if (!cfg.data) {
       ["dias", "horas", "min", "seg"].forEach((u) => ($("#cd-" + u).textContent = "--"));
+      $("#countdown-meses").hidden = true;
       $("#countdown-date").textContent = "Toque na engrenagem para configurar a data 💍";
       $(".countdown-label").textContent = "Faltam";
       cartao.classList.remove("is-past");
@@ -320,6 +354,7 @@
       cartao.classList.add("is-past");
       $(".countdown-label").textContent = diff > -864e5 ? "É hoje! 🎉" : "Felizes para sempre 💛";
       ["dias", "horas", "min", "seg"].forEach((u) => ($("#cd-" + u).textContent = "0"));
+      $("#countdown-meses").hidden = true;
       return;
     }
 
@@ -340,6 +375,10 @@
     $("#cd-horas").textContent = String(horas).padStart(2, "0");
     $("#cd-min").textContent = String(min).padStart(2, "0");
     $("#cd-seg").textContent = String(seg).padStart(2, "0");
+
+    const meses = $("#countdown-meses");
+    meses.textContent = textoMeses(agora, alvo);
+    meses.hidden = false;
   }
 
   setInterval(atualizarContagem, 1000);

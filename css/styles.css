@@ -253,6 +253,16 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
   margin-top: 4px;
 }
 
+/* leitura mais humana da mesma espera: "7 meses e 13 dias" */
+.countdown-meses {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--gold-soft);
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+.countdown-meses[hidden] { display: none; }
+
 .countdown-date {
   font-size: 0.82rem;
   color: rgba(247, 242, 233, 0.75);
