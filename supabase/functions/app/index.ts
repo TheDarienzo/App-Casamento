@@ -264,6 +264,67 @@ Deno.serve(async (req: Request) => {
     return json(r);
   }
 
+  // ---------- página do convite ----------
+  //
+  // Únicas operações que respondem sem sessão. Cada uma devolve o mínimo:
+  // nada de telefone, nada de lista inteira, e o código do casal não sai
+  // daqui — a página é identificada por um apelido público.
+
+  if (typeof op === "string" && op.startsWith("convite_")) {
+    const origem = await origemResumida(req);
+    const { data: liberado } = await supabase.rpc("limite_convite", { p_origem: origem });
+    if (liberado === false) {
+      return json({ erro: "muitos acessos; tente de novo em alguns minutos" }, 429);
+    }
+
+    if (op === "convite_info") {
+      const { data, error } = await supabase.rpc("convite_info", {
+        p_slug: String(corpo.slug ?? "").slice(0, 80),
+      });
+      if (error) return json({ erro: "falha ao consultar" }, 500);
+      if (!data) return json({ erro: "convite não encontrado" }, 404);
+      return json(data);
+    }
+
+    if (op === "convite_convidado") {
+      const { data, error } = await supabase.rpc("convite_convidado", {
+        p_codigo: String(corpo.codigo ?? "").slice(0, 20),
+      });
+      if (error) return json({ erro: "falha ao consultar" }, 500);
+      if (!data) return json({ erro: "convite não encontrado" }, 404);
+      return json(data);
+    }
+
+    if (op === "convite_buscar") {
+      const { data, error } = await supabase.rpc("convite_buscar", {
+        p_slug: String(corpo.slug ?? "").slice(0, 80),
+        p_termo: String(corpo.termo ?? "").slice(0, 60),
+        p_origem: origem,
+      });
+      if (error) return json({ erro: "falha ao buscar" }, 500);
+      const r = data as Record<string, unknown>;
+      if (r && (r as { erro?: string }).erro === "termo_curto") {
+        return json({ erro: "digite ao menos 3 letras do nome" }, 400);
+      }
+      return json({ achados: data });
+    }
+
+    if (op === "convite_confirmar") {
+      const { data, error } = await supabase.rpc("convite_confirmar", {
+        p_codigo: String(corpo.codigo ?? "").slice(0, 20),
+        p_vai: corpo.vai === true,
+        p_pessoas: Number(corpo.pessoas) || 1,
+        p_recado: String(corpo.recado ?? "").slice(0, 500),
+      });
+      if (error) return json({ erro: "falha ao confirmar" }, 500);
+      const r = data as Record<string, unknown>;
+      if (r?.erro) return json({ erro: "convite não encontrado" }, 404);
+      return json(r);
+    }
+
+    return json({ erro: "operação desconhecida" }, 400);
+  }
+
   // daqui para baixo, tudo exige sessão
   const sess = await sessao(corpo);
   if ("erro" in sess) return json({ erro: sess.erro }, sess.status);

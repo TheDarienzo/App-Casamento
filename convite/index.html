@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Nosso Casamento — Convite</title>
+  <meta name="description" content="Convite de casamento: confirme sua presença, veja o local e a lista de presentes.">
+  <meta name="theme-color" content="#2f3a2a">
+  <link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
+
+  <!-- prévia ao compartilhar no WhatsApp e nas redes -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Nosso Casamento">
+  <meta property="og:description" content="Confirme sua presença no nosso casamento 💛">
+  <meta property="og:image" content="../icons/icon-512.png">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Karla:ital,wght@0,300..700;1,300..700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="convite.css">
+</head>
+<body>
+
+  <!-- enquanto os dados não chegam -->
+  <div class="carregando" id="carregando">
+    <svg viewBox="94 96 344 306" width="120" height="107" aria-hidden="true">
+      <circle cx="216" cy="280" r="104" fill="none" stroke="#b3892e" stroke-width="20"/>
+      <circle cx="316" cy="280" r="104" fill="none" stroke="#c98a80" stroke-width="20"/>
+      <path d="M244 142l22-38 22 38" fill="none" stroke="#b3892e" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>
+
+  <!-- quando o convite ainda não foi publicado ou o endereço está errado -->
+  <div class="aviso-vazio" id="aviso-vazio" hidden>
+    <h1>Convite indisponível</h1>
+    <p id="aviso-texto">Confira o endereço com os noivos.</p>
+  </div>
+
+  <main id="pagina" hidden>
+
+    <header class="capa">
+      <div class="capa-foto" id="capa-foto" hidden><img id="capa-img" alt=""></div>
+      <p class="capa-super">Vamos nos casar</p>
+      <h1 class="capa-nomes" id="capa-nomes">Nosso Casamento</h1>
+      <p class="capa-data" id="capa-data"></p>
+      <div class="contagem" id="contagem" hidden>
+        <div class="cd"><b id="cd-dias">–</b><span>dias</span></div>
+        <div class="cd"><b id="cd-horas">–</b><span>horas</span></div>
+        <div class="cd"><b id="cd-min">–</b><span>min</span></div>
+      </div>
+      <p class="capa-mensagem" id="capa-mensagem"></p>
+    </header>
+
+    <!-- ---------- confirmação de presença ---------- -->
+    <section class="secao" id="secao-rsvp">
+      <h2>Confirme sua presença</h2>
+      <p class="secao-sub" id="rsvp-prazo" hidden></p>
+
+      <!-- passo 1: quem é você -->
+      <div class="cartao" id="passo-busca">
+        <label class="campo-rotulo" for="busca">Digite seu nome como está no convite</label>
+        <div class="busca-linha">
+          <input type="search" id="busca" placeholder="Ex.: Ana Paula" autocomplete="off" autocapitalize="words" maxlength="60">
+          <button class="botao" id="btn-buscar" type="button">Buscar</button>
+        </div>
+        <p class="recado-erro" id="busca-erro" role="alert"></p>
+        <ul class="achados" id="achados"></ul>
+      </div>
+
+      <!-- passo 2: a resposta -->
+      <div class="cartao" id="passo-resposta" hidden>
+        <p class="ola">Olá, <b id="convidado-nome"></b></p>
+        <p class="secao-sub" id="convidado-vagas"></p>
+
+        <div class="escolha">
+          <button class="opcao" id="btn-vou" type="button">Eu vou 🎉</button>
+          <button class="opcao opcao-nao" id="btn-nao-vou" type="button">Não poderei ir</button>
+        </div>
+
+        <div id="detalhe-sim" hidden>
+          <label class="campo-rotulo" for="pessoas">Quantas pessoas vão?</label>
+          <div class="contador">
+            <button class="contador-btn" id="menos" type="button" aria-label="Menos uma pessoa">−</button>
+            <span class="contador-num" id="pessoas">1</span>
+            <button class="contador-btn" id="mais" type="button" aria-label="Mais uma pessoa">+</button>
+          </div>
+        </div>
+
+        <label class="campo-rotulo" for="recado">Deixe um recado para os noivos <span class="opcional">(opcional)</span></label>
+        <textarea id="recado" rows="3" maxlength="500" placeholder="Escreva algo carinhoso…"></textarea>
+
+        <button class="botao botao-cheio" id="btn-enviar" type="button">Enviar resposta</button>
+        <p class="recado-erro" id="resposta-erro" role="alert"></p>
+        <button class="voltar" id="btn-voltar" type="button">Não é você? Buscar outro nome</button>
+      </div>
+
+      <!-- passo 3: obrigado -->
+      <div class="cartao cartao-ok" id="passo-pronto" hidden>
+        <p class="pronto-icone" id="pronto-icone">💛</p>
+        <p class="pronto-titulo" id="pronto-titulo"></p>
+        <p class="secao-sub" id="pronto-texto"></p>
+        <button class="voltar" id="btn-mudar" type="button">Mudar minha resposta</button>
+      </div>
+    </section>
+
+    <!-- ---------- local ---------- -->
+    <section class="secao" id="secao-local" hidden>
+      <h2>Onde vai ser</h2>
+      <div class="cartao">
+        <p class="local-nome" id="local-nome"></p>
+        <p class="secao-sub" id="local-endereco"></p>
+        <a class="botao botao-cheio" id="btn-mapa" target="_blank" rel="noopener" hidden>Como chegar</a>
+        <a class="botao botao-vazado botao-cheio" id="btn-agenda" download="casamento.ics">Adicionar ao meu calendário</a>
+      </div>
+    </section>
+
+    <!-- ---------- presentes ---------- -->
+    <section class="secao" id="secao-presentes" hidden>
+      <h2>Lista de presentes</h2>
+      <div class="cartao">
+        <p class="secao-sub" id="presentes-texto"></p>
+        <a class="botao botao-cheio" id="btn-presentes" target="_blank" rel="noopener" hidden>Ver a lista</a>
+        <div id="bloco-pix" hidden>
+          <p class="pix-titulo">Ou nos presenteie por Pix</p>
+          <p class="secao-sub" id="pix-nome"></p>
+          <div class="pix-chave"><span id="pix-chave"></span></div>
+          <button class="botao botao-vazado botao-cheio" id="btn-copiar-pix" type="button">Copiar chave Pix</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- traje ---------- -->
+    <section class="secao" id="secao-traje" hidden>
+      <h2>Traje</h2>
+      <div class="cartao"><p class="secao-sub" id="traje-texto"></p></div>
+    </section>
+
+    <footer class="rodape">
+      <p id="rodape-nomes"></p>
+      <p class="rodape-fina">Feito com carinho 💛</p>
+    </footer>
+  </main>
+
+  <div class="aviso" id="aviso" role="status"></div>
+  <script src="convite.js"></script>
+</body>
+</html>

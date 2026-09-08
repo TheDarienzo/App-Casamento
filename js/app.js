@@ -6,7 +6,7 @@
 (() => {
   "use strict";
 
-  const VERSAO_APP = "28";
+  const VERSAO_APP = "29";
   const STORAGE_KEY = "nosso-casamento-v1";
   const CASAL_KEY = "nosso-casamento-casal";
   // bilhete de sessão assinado pelo servidor (substitui guardar o código do casal)
@@ -18,6 +18,10 @@
 
   const estadoInicial = () => ({
     config: { noiva: "", noivo: "", data: "", local: "", foto: "" },
+    // conteúdo da página pública do convite (ver convite/)
+    convite: { slug: "", publicado: false, titulo: "", mensagem: "", localNome: "",
+               endereco: "", mapaLink: "", presentesLink: "", presentesTexto: "",
+               pixChave: "", pixNome: "", traje: "", prazo: "" },
     convidados: [],   // { id, nome, lado: "noiva"|"noivo", acompanhantes, confirmado }
     itens: [],        // { id, descricao, valor (centavos), resolvido, prazo: "AAAA-MM-DD" }
     padrinhos: [],    // { id, padrinho, madrinha }
@@ -140,6 +144,18 @@
 
   const iconeLixeira =
     '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m3 0-.8 12.1a2 2 0 0 1-2 1.9H8.8a2 2 0 0 1-2-1.9L6 7"/><path d="M10 11v6M14 11v6"/></svg>';
+  // avião de papel: mandar o convite
+  const iconeConvite =
+    '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3 10.5 13.5"/><path d="M21 3l-6.5 18-4-8-8-4z"/></svg>';
+
+  // o que a família respondeu na página do convite
+  function seloResposta(c) {
+    if (!c.respondeu) return "";
+    if (!c.confirmado) return '<span class="selo-resposta selo-nao-vem">não vai</span>';
+    const n = c.pessoasConfirmadas || 0;
+    return `<span class="selo-resposta selo-vem">confirmou ${n || "presença"}${n ? (n === 1 ? " pessoa" : " pessoas") : ""}</span>`;
+  }
+
   const iconeCheck =
     '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4 10-10"/></svg>';
 
@@ -589,8 +605,10 @@
           <button class="check-toggle ${c.confirmado ? "is-on" : ""}" data-acao="confirmar" aria-label="Confirmar presença" title="Confirmar presença">${iconeCheck}</button>
           <div class="item-main">
             <div class="item-title">${destacar(c.nome, termo)}</div>
-            <div class="item-meta">${badge}<span>${pessoas} pessoa${pessoas === 1 ? "" : "s"}${c.acompanhantes ? ` (+${c.acompanhantes} acomp.)` : ""}</span></div>
+            <div class="item-meta">${badge}<span>${pessoas} pessoa${pessoas === 1 ? "" : "s"}${c.acompanhantes ? ` (+${c.acompanhantes} acomp.)` : ""}</span>${seloResposta(c)}</div>
+            ${c.recado ? `<div class="recado-convidado">“${escapeHtml(c.recado)}”</div>` : ""}
           </div>
+          ${c.codigo ? `<button class="btn-convite" data-acao="convidar" aria-label="Mandar o convite" title="Mandar o convite pelo WhatsApp">${iconeConvite}</button>` : ""}
           ${btnEditar("convidado")}
           <button class="btn-remove" data-acao="remover" aria-label="Remover">${iconeLixeira}</button>
         </li>`;
@@ -629,6 +647,10 @@
     const c = state.convidados.find((x) => x.id === id);
     if (!c) return;
     const acao = btn.dataset.acao;
+    if (acao === "convidar") {
+      convidarPeloWhatsApp(c);
+      return;
+    }
     if (acao === "editar") {
       abrirEdicao(id);
       return;
@@ -1583,9 +1605,12 @@
       ? JSON.stringify(item, Object.keys(item).sort())
       : JSON.stringify(item);
   const impressaoLista = (lista) => (lista || []).map(impressao).sort().join("|");
+  // config e convite são objetos únicos, não listas de cadastros
+  const OBJETOS = ["config", "convite"];
+
   const estadosDiferem = (a, b) =>
     LISTAS.some((lista) => impressaoLista(a[lista]) !== impressaoLista(b[lista])) ||
-    impressao(a.config || {}) !== impressao(b.config || {});
+    OBJETOS.some((o) => impressao(a[o] || {}) !== impressao(b[o] || {}));
 
   // Última versão que sabemos estar no servidor. Serve de referência para
   // descobrir o que mudou aqui — e é sempre a resposta do servidor, nunca o
@@ -1593,6 +1618,19 @@
   let baseSincronizada = null;
 
   const copiar = (o) => JSON.parse(JSON.stringify(o));
+
+  // Junta o que veio do servidor com o formato padrão. config e convite são
+  // objetos (não listas), então precisam ser mesclados campo a campo — senão
+  // um objeto vazio vindo da nuvem apagaria os campos que o app espera.
+  function comoEstado(nuvem) {
+    const base = estadoInicial();
+    return {
+      ...base,
+      ...nuvem,
+      config: { ...base.config, ...(nuvem.config || {}) },
+      convite: { ...base.convite, ...(nuvem.convite || {}) },
+    };
+  }
 
   // Manda só o que mudou neste aparelho.
   //
@@ -1606,8 +1644,10 @@
   function estadoParaEnviar() {
     if (!baseSincronizada) return state; // primeira vez: manda tudo
     const saida = { apagados: state.apagados || [] };
-    if (impressao(state.config || {}) !== impressao(baseSincronizada.config || {})) {
-      saida.config = state.config;
+    for (const o of OBJETOS) {
+      if (impressao(state[o] || {}) !== impressao(baseSincronizada[o] || {})) {
+        saida[o] = state[o];
+      }
     }
     for (const lista of LISTAS) {
       const antes = new Map((baseSincronizada[lista] || []).map((x) => [x.id, impressao(x)]));
@@ -1677,7 +1717,7 @@
         // o servidor devolve tudo somado (o nosso + o que o outro celular
         // cadastrou): aplica só se realmente trouxe novidade
         if (estadosDiferem(r.estado, state)) {
-          state = { ...estadoInicial(), ...r.estado, config: { ...estadoInicial().config, ...(r.estado.config || {}) } };
+          state = comoEstado(r.estado);
           try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
           preencherConfig();
           renderTudo();
@@ -1713,7 +1753,9 @@
     if (editandoId || notaEditando) return; // não sobrescreve algo sendo editado
     if (document.visibilityState !== "visible") return;
     const ativo = document.activeElement;
-    if (ativo && ativo.closest && ativo.closest("#form-config")) return;
+    // formulários que o app preenche de volta: não sobrescreve enquanto
+    // alguém está digitando neles
+    if (ativo && ativo.closest && ativo.closest("#form-config, #card-convite")) return;
     try {
       const revisaoAoBuscar = revisaoLocal;
       const r = await api({ op: "estado", ...credencial() });
@@ -1726,7 +1768,7 @@
       ultimoAtualizadoEm = r.atualizado_em;
       const nuvem = r.estado || {};
       baseSincronizada = copiar(nuvem);
-      state = { ...estadoInicial(), ...nuvem, config: { ...estadoInicial().config, ...(nuvem.config || {}) } };
+      state = comoEstado(nuvem);
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
       preencherConfig();
       renderTudo();
@@ -1892,7 +1934,7 @@
         (nuvem.fornecedores || []).length ||
         (nuvem.config && (nuvem.config.noiva || nuvem.config.noivo || nuvem.config.data));
       if (nuvemTemDados) {
-        state = { ...estadoInicial(), ...nuvem, config: { ...estadoInicial().config, ...(nuvem.config || {}) } };
+        state = comoEstado(nuvem);
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
         preencherConfig();
         renderTudo();
@@ -2062,7 +2104,7 @@
     try {
       const r = await api({ op: "estado", ...credencial() });
       ultimoAtualizadoEm = r.atualizado_em || ultimoAtualizadoEm;
-      state = { ...estadoInicial(), ...r.estado, config: { ...estadoInicial().config, ...(r.estado.config || {}) } };
+      state = comoEstado(r.estado);
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
       syncPendente = false;
       preencherConfig();
@@ -2111,7 +2153,78 @@
     renderFornecedores();
     renderPresentes();
     renderNotas();
+    preencherConvite();
     atualizarContagem();
+  }
+
+  /* ---------- página do convite ---------- */
+
+  // endereço da página que os convidados abrem
+  const enderecoConvite = () =>
+    location.origin + location.pathname.replace(/[^/]*$/, "") + "convite/";
+
+  const CAMPOS_CONVITE = {
+    "#convite-slug": "slug",
+    "#convite-mensagem": "mensagem",
+    "#convite-endereco": "endereco",
+    "#convite-mapa": "mapaLink",
+    "#convite-presentes": "presentesLink",
+    "#convite-presentes-texto": "presentesTexto",
+    "#convite-pix": "pixChave",
+    "#convite-pix-nome": "pixNome",
+    "#convite-traje": "traje",
+    "#convite-prazo": "prazo",
+  };
+
+  function preencherConvite() {
+    const c = state.convite || {};
+    for (const [seletor, campo] of Object.entries(CAMPOS_CONVITE)) {
+      const el = $(seletor);
+      if (el && document.activeElement !== el) el.value = c[campo] || "";
+    }
+    const publicado = $("#convite-publicado");
+    if (publicado && document.activeElement !== publicado) publicado.checked = !!c.publicado;
+    $("#convite-situacao").textContent = c.publicado ? "no ar" : "não publicado";
+    $("#convite-endereco-completo").textContent = enderecoConvite();
+  }
+
+  $("#btn-salvar-convite").addEventListener("click", () => {
+    const c = { ...state.convite };
+    for (const [seletor, campo] of Object.entries(CAMPOS_CONVITE)) {
+      c[campo] = $(seletor).value.trim();
+    }
+    c.publicado = $("#convite-publicado").checked;
+    if (!c.slug) {
+      toast("Escolha um endereço para a página");
+      return;
+    }
+    state.convite = c;
+    salvar();
+    renderTudo();
+    toast(c.publicado ? "Convite salvo e no ar 💌" : "Convite salvo (ainda não publicado)");
+  });
+
+  $("#btn-abrir-convite").addEventListener("click", () => {
+    window.open(enderecoConvite(), "_blank", "noopener");
+  });
+
+  // Mensagem pronta para mandar no WhatsApp, com o link pessoal da família.
+  function convidarPeloWhatsApp(convidado) {
+    const link = enderecoConvite() + "#" + convidado.codigo;
+    const quando = state.config.data
+      ? new Date(state.config.data).toLocaleDateString("pt-BR", { day: "2-digit", month: "long" })
+      : "";
+    const texto =
+      `Oi, ${convidado.nome}! 💛\n\n` +
+      `Estamos casando${quando ? " no dia " + quando : ""} e queremos muito você com a gente.\n\n` +
+      `Confirme sua presença aqui:\n${link}`;
+    const tel = (convidado.telefone || "").replace(/\D/g, "");
+    const numero = tel ? (tel.length <= 11 ? "55" + tel : tel) : "";
+    window.open(
+      `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`,
+      "_blank",
+      "noopener"
+    );
   }
 
   /* ---------- foto do casal em tamanho grande ---------- */
@@ -2159,6 +2272,7 @@
   })();
 
   preencherConfig();
+  preencherConvite();
   renderTudo();
   renderSync();
   renderLogin();

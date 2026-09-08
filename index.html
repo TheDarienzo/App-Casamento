@@ -510,6 +510,60 @@
         <button class="btn-danger btn-desconectar" id="btn-sair-conta" type="button">Sair da conta neste aparelho</button>
       </div>
 
+      <div class="card" id="card-convite">
+        <div class="card-head">
+          <h2>Página do convite</h2>
+          <span class="card-head-value" id="convite-situacao">—</span>
+        </div>
+        <p class="card-text">A página que os convidados abrem para confirmar presença, ver o local e a lista de presentes.</p>
+
+        <label class="campo-label" for="convite-slug">Endereço da página</label>
+        <input type="text" id="convite-slug" placeholder="rayane-e-lucas" autocapitalize="none" maxlength="60">
+        <p class="campo-dica" id="convite-endereco-completo"></p>
+
+        <label class="campo-label" for="convite-mensagem">Mensagem de boas-vindas</label>
+        <textarea id="convite-mensagem" rows="2" maxlength="600" placeholder="Ficaríamos muito felizes com a sua presença…"></textarea>
+
+        <label class="campo-label" for="convite-endereco">Endereço do local</label>
+        <input type="text" id="convite-endereco" maxlength="200" placeholder="Rua, número, bairro, cidade">
+
+        <label class="campo-label" for="convite-mapa">Link do mapa</label>
+        <input type="text" id="convite-mapa" maxlength="300" inputmode="url" placeholder="https://maps.google.com/...">
+
+        <label class="campo-label" for="convite-presentes">Link da lista de presentes</label>
+        <input type="text" id="convite-presentes" maxlength="300" inputmode="url" placeholder="https://www.havan.com.br/...">
+
+        <label class="campo-label" for="convite-presentes-texto">Recado sobre os presentes</label>
+        <textarea id="convite-presentes-texto" rows="2" maxlength="400" placeholder="Sua presença já é o maior presente…"></textarea>
+
+        <div class="form-row">
+          <label class="campo-meio">
+            <span class="campo-label">Chave Pix</span>
+            <input type="text" id="convite-pix" maxlength="100" placeholder="e-mail, telefone ou aleatória">
+          </label>
+          <label class="campo-meio">
+            <span class="campo-label">Nome no Pix</span>
+            <input type="text" id="convite-pix-nome" maxlength="80" placeholder="Quem recebe">
+          </label>
+        </div>
+
+        <label class="campo-label" for="convite-traje">Traje</label>
+        <input type="text" id="convite-traje" maxlength="120" placeholder="Esporte fino">
+
+        <label class="campo-label" for="convite-prazo">Prazo para confirmar</label>
+        <input type="date" id="convite-prazo">
+
+        <label class="troca-linha">
+          <input type="checkbox" id="convite-publicado">
+          <span><b>Publicar a página</b><br><span class="campo-dica">Enquanto estiver desmarcado, quem abrir o link vê um aviso de que o convite não está disponível.</span></span>
+        </label>
+
+        <div class="form-row">
+          <button class="btn-primary" id="btn-salvar-convite" type="button">Salvar convite</button>
+          <button class="btn-secondary" id="btn-abrir-convite" type="button">Ver a página</button>
+        </div>
+      </div>
+
       <div class="card">
         <div class="card-head"><h2>Backup dos dados</h2></div>
         <p class="card-text">Os dados ficam na nuvem e neste aparelho. Exporte um arquivo de backup de vez em quando para guardar uma cópia de segurança de tudo.</p>

@@ -3,7 +3,7 @@
    quando há internet, para abrir já na versão mais nova. O cache fica como
    reserva para funcionar offline. Ícones e fontes seguem vindo do cache. */
 
-const VERSAO = "28";
+const VERSAO = "29";
 const CACHE = "nosso-casamento-v" + VERSAO;
 
 const SHELL = [
@@ -91,6 +91,9 @@ self.addEventListener("fetch", (event) => {
 
   // a API de sincronização nunca passa pelo cache
   if (url.pathname.endsWith("/api")) return;
+
+  // a página do convite é outra coisa: o app não se mete nela
+  if (url.pathname.includes("/convite")) return;
 
   // fontes do Google: cache-first com preenchimento dinâmico
   if (url.hostname === "fonts.googleapis.com" || url.hostname === "fonts.gstatic.com") {

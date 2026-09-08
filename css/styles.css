@@ -1206,6 +1206,85 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
   .abertura { display: none; }
 }
 
+/* ---------- Página do convite (configurações) ---------- */
+
+.campo-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+  margin-top: 4px;
+}
+.campo-dica { font-size: 0.8rem; color: var(--ink-faint); }
+.campo-dica b { color: var(--ink-soft); }
+
+.card .campo-label + input,
+.card .campo-label + textarea,
+.card textarea {
+  width: 100%;
+  background: var(--ivory);
+  border: 1.5px solid var(--ivory-deep);
+  border-radius: 12px;
+  padding: 11px 13px;
+  font-size: 0.95rem;
+  resize: vertical;
+}
+.card .campo-label + input:focus,
+.card textarea:focus { outline: none; border-color: var(--gold-soft); }
+
+.campo-meio { flex: 1; min-width: 0; }
+.campo-meio .campo-label { margin-top: 0; }
+
+.troca-linha {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--ivory);
+  border: 1.5px solid var(--ivory-deep);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.troca-linha input { width: 20px; height: 20px; flex-shrink: 0; margin-top: 2px; }
+
+/* etiqueta de quem já respondeu, na lista de convidados */
+.selo-resposta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 99px;
+  white-space: nowrap;
+}
+.selo-vem { color: #3f5730; background: var(--sage-soft); }
+.selo-nao-vem { color: #8d3a29; background: var(--rose-soft); }
+.recado-convidado {
+  font-size: 0.84rem;
+  font-style: italic;
+  color: var(--ink-soft);
+  background: var(--ivory);
+  border-left: 3px solid var(--gold-soft);
+  border-radius: 0 8px 8px 0;
+  padding: 6px 10px;
+  margin-top: 6px;
+}
+.btn-convite {
+  background: none;
+  border: none;
+  color: var(--sage);
+  padding: 8px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.btn-convite:hover { background: var(--sage-soft); }
+
 /* ---------- Bottom nav ---------- */
 
 .bottom-nav {

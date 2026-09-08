@@ -73,9 +73,24 @@ apagado_em    timestamptz                          -- soft delete
   sombras suaves — Fraunces nos títulos e números, Karla no texto. Nada de
   textura de aquarela nem fonte manuscrita (testado e rejeitado).
 
+## Página do convite (`convite/`)
+
+Página pública que os convidados abrem. Fica no mesmo endereço, em
+`/convite/`, e é a **única parte do sistema que responde sem sessão**.
+
+- Só as operações `convite_*` da API são públicas, com limite de acessos
+  por origem. Nenhuma delas devolve telefone, lista inteira ou o código do
+  casal — a página é identificada por um apelido público (`convite.slug`).
+- Cada família tem um `convidados.codigo` curto: o link pessoal
+  (`/convite/#codigo`) abre a página já com o nome dela. Quem receber o
+  link encaminhado acha o próprio nome pela busca.
+- O convite só aparece com `convite.publicado = true`.
+- O service worker do app não intercepta `/convite`.
+
 ## Publicação
 
 `node scripts/subir-versao.mjs`, gerar o zip com `index.html`,
-`manifest.webmanifest`, `sw.js`, `_headers`, `css/`, `js/` e `icons/`, e
+`manifest.webmanifest`, `sw.js`, `_headers`, `css/`, `js/`, `icons/` e
+`convite/`, e
 subir no Cloudflare em *New deployment → Upload assets*. O `_headers`
 precisa ficar na raiz do upload. Detalhes em `PUBLICAR.md`.
