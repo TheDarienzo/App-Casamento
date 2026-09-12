@@ -94,3 +94,8 @@ Página pública que os convidados abrem. Fica no mesmo endereço, em
 `convite/`, e
 subir no Cloudflare em *New deployment → Upload assets*. O `_headers`
 precisa ficar na raiz do upload. Detalhes em `PUBLICAR.md`.
+
+A API só responde aos endereços listados em
+`configuracao.origens_permitidas`. **Endereço novo do app (domínio
+próprio, teste, o que for) entra nessa lista antes de publicar** — senão
+a página abre e nada salva. Passo a passo do domínio em `DOMINIO.md`.

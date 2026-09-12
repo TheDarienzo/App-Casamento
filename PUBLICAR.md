@@ -30,6 +30,13 @@ Cloudflare Pages (grátis):
    existir, o app se atualiza sozinho na hora. Em **Configurações → Versão
    do app** dá para conferir qual está rodando e forçar a busca.
 
+## Endereço próprio (domínio)
+
+Dá para trocar o endereço `...workers.dev` por um subdomínio seu, como
+`casamento.rayanestore.com.br`. O passo a passo está em
+[`DOMINIO.md`](DOMINIO.md) — nenhum arquivo do app precisa mudar, mas o
+endereço novo tem de entrar na lista de CORS da API antes.
+
 ## Os dois celulares vendo as mesmas listas
 
 Cada pessoa tem seu login. Para compartilharem o mesmo casamento, o par
@@ -44,6 +51,9 @@ dos dois são somadas, sem perder nada.
 - **Backend**: projeto Supabase `App-Casamento`, Edge Function `app`
   (API de sincronização) + tabela `casamentos`.
 - O endereço da API está fixado em `js/app.js` (constante `API_URL`).
+- Os endereços autorizados a chamar a API ficam em
+  `configuracao.origens_permitidas`, no Supabase. Endereço fora da lista
+  abre a página mas não sincroniza.
 
 > Por que não servir a página direto do Supabase? Por política da
 > plataforma, Edge Functions reescrevem `text/html` para `text/plain` —
