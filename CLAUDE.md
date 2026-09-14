@@ -80,8 +80,10 @@ estado e a base — só os cadastros que este aparelho mudou.
   a Edge Function manda um aviso vazio pelo Realtime, canal
   `casal-<hash>`; o app busca pela API ao receber. O ciclo de 7 s continua
   como rede de segurança. A CSP precisa liberar `wss://…supabase.co`.
-- Teste de referência: `teste-abertura.mjs` (cópia velha ao abrir, resposta
-  durante edição, edição sem conexão) — os três cenários têm de passar.
+- Testes de referência em `testes/`: `teste-abertura.mjs` (cópia velha ao
+  abrir, resposta durante edição, edição sem conexão) e
+  `teste-todas-as-telas.mjs` (uma alteração em cada lista, config e convite,
+  nos dois sentidos). Todos têm de passar antes de publicar.
 
 ## Aplicativo
 
