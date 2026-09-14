@@ -29,6 +29,7 @@ const supabase = createClient(
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ESTADO_MAX_BYTES = 512_000;
+const REALTIME_URL = "https://rgxkmntpdbvvqcwksrwl.supabase.co/realtime/v1/api/broadcast";
 
 // ---------- configuração guardada no banco ----------
 
@@ -82,6 +83,36 @@ async function anotarOrigem(req: Request): Promise<void> {
   const nova = [...vistas, origem].slice(-5).join(",");
   await supabase.from("configuracao").upsert({ chave: "origens_vistas", valor: nova });
   cache.delete("origens_vistas");
+}
+
+// ---------- tempo real ----------
+
+// Depois de cada gravação, avisa os aparelhos do casal por um canal do
+// Realtime. O aviso não leva dado nenhum — só "mudou, busque de novo" — e o
+// nome do canal é derivado do id do casal, não o id em si: quem conhecer a
+// chave pública do projeto pode até assinar o canal, mas não vê nada e não
+// descobre o código.
+async function canalDoCasal(casal: string): Promise<string> {
+  const bytes = new TextEncoder().encode("canal:" + casal);
+  const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+  return "casal-" + [...hash.slice(0, 12)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function avisarMudanca(casal: string, atualizadoEm: unknown): Promise<void> {
+  const chave = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const aviso = canalDoCasal(casal)
+    .then((topic) =>
+      fetch(REALTIME_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: chave, Authorization: "Bearer " + chave },
+        body: JSON.stringify({ messages: [{ topic, event: "mudou", payload: { atualizado_em: atualizadoEm } }] }),
+      })
+    )
+    .then(() => undefined, () => undefined);
+  // não atrasa a resposta quando o runtime deixa terminar em segundo plano
+  const rt = (globalThis as { EdgeRuntime?: { waitUntil(p: Promise<unknown>): void } }).EdgeRuntime;
+  if (rt?.waitUntil) rt.waitUntil(aviso);
+  else await aviso;
 }
 
 // ---------- identificação de quem chama ----------
@@ -319,7 +350,10 @@ Deno.serve(async (req: Request) => {
       if (error) return json({ erro: "falha ao confirmar" }, 500);
       const r = data as Record<string, unknown>;
       if (r?.erro) return json({ erro: "convite não encontrado" }, 404);
-      return json(r);
+      // o id do casal serve só para avisar os noivos; não vai ao convidado
+      const { casal_id, ...publico } = r;
+      if (typeof casal_id === "string") await avisarMudanca(casal_id, new Date().toISOString());
+      return json(publico);
     }
 
     return json({ erro: "operação desconhecida" }, 400);
@@ -344,10 +378,20 @@ Deno.serve(async (req: Request) => {
     const { data, error } = await supabase.rpc("ler_estado", { p_casal: sess.casal });
     if (error) return json({ erro: "falha ao consultar" }, 500);
     if (!data) return json({ erro: "código não encontrado" }, 404);
-    return json({ ...(data as Record<string, unknown>), ...renovado });
+    return json({ ...(data as Record<string, unknown>), canal: await canalDoCasal(sess.casal), ...renovado });
   }
 
   if (op === "salvar") {
+    // Versões antigas do app mandavam o cadastro inteiro guardado no celular
+    // ao abrir, e a cópia velha passava por cima do que o outro aparelho
+    // tinha mudado. Elas continuam lendo, mas não gravam mais: o app avisa
+    // que precisa atualizar. O mínimo fica em configuracao.versao_minima_gravacao.
+    const versao = parseInt(String(corpo.versao ?? ""), 10) || 0;
+    const minima = parseInt(await ajuste("versao_minima_gravacao", "30"), 10) || 0;
+    if (versao < minima) {
+      return json({ erro: "esta versão do app não grava mais; atualize para continuar", atualizar: true }, 426);
+    }
+
     const estado = corpo.estado;
     if (typeof estado !== "object" || estado === null) return json({ erro: "estado inválido" }, 400);
     if (JSON.stringify(estado).length > ESTADO_MAX_BYTES) return json({ erro: "estado grande demais" }, 413);
@@ -360,7 +404,9 @@ Deno.serve(async (req: Request) => {
       if ((error.message || "").includes("casal_invalido")) return json({ erro: "código não encontrado" }, 404);
       return json({ erro: "falha ao salvar" }, 500);
     }
-    return json({ ok: true, ...(data as Record<string, unknown>), ...renovado });
+    const gravado = data as Record<string, unknown>;
+    await avisarMudanca(sess.casal, gravado?.atualizado_em);
+    return json({ ok: true, ...gravado, canal: await canalDoCasal(sess.casal), ...renovado });
   }
 
   return json({ erro: "operação desconhecida" }, 400);

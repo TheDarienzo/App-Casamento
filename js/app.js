@@ -6,11 +6,12 @@
 (() => {
   "use strict";
 
-  const VERSAO_APP = "29";
+  const VERSAO_APP = "30";
   const STORAGE_KEY = "nosso-casamento-v1";
   const CASAL_KEY = "nosso-casamento-casal";
   // bilhete de sessão assinado pelo servidor (substitui guardar o código do casal)
   const TOKEN_KEY = "nosso-casamento-token";
+  const BASE_KEY = "nosso-casamento-base"; // última versão confirmada pelo servidor
 
   // API de sincronização (Edge Function no Supabase). O app pode estar
   // hospedado em qualquer lugar (Cloudflare Pages, GitHub Pages, …).
@@ -1579,7 +1580,7 @@
 
   // O que o servidor precisa para saber quem está pedindo. O código do casal
   // só vai enquanto o aparelho ainda não tiver recebido um bilhete.
-  const credencial = () => (token ? { token } : { casal });
+  const credencial = () => ({ versao: VERSAO_APP, ...(token ? { token } : { casal }) });
 
   // Vale tanto o bilhete novo quanto o código antigo, enquanto a transição durar.
   const temSessao = () => Boolean(token || casal);
@@ -1615,9 +1616,24 @@
   // Última versão que sabemos estar no servidor. Serve de referência para
   // descobrir o que mudou aqui — e é sempre a resposta do servidor, nunca o
   // que julgamos ter mandado, para refletir qualquer ajuste que ele faça.
+  //
+  // Fica guardada no aparelho: sem ela, ao reabrir o app não há como saber o
+  // que foi alterado aqui e o que só está velho porque o outro celular mudou.
   let baseSincronizada = null;
+  try {
+    const raw = localStorage.getItem(BASE_KEY);
+    if (raw) baseSincronizada = JSON.parse(raw);
+  } catch {}
 
   const copiar = (o) => JSON.parse(JSON.stringify(o));
+
+  function guardarBase(nuvem) {
+    baseSincronizada = nuvem ? copiar(nuvem) : null;
+    try {
+      if (baseSincronizada) localStorage.setItem(BASE_KEY, JSON.stringify(baseSincronizada));
+      else localStorage.removeItem(BASE_KEY);
+    } catch {}
+  }
 
   // Junta o que veio do servidor com o formato padrão. config e convite são
   // objetos (não listas), então precisam ser mesclados campo a campo — senão
@@ -1641,17 +1657,23 @@
   //
   // O servidor grava o que chega e não apaga o que não veio, então enviar só
   // a diferença é seguro: cada aparelho mexe apenas no que ele mesmo mudou.
+  //
+  // Sem base não há diferença a calcular — e mandar o cadastro inteiro nessa
+  // hora foi o que apagou alterações da Rayane: a cópia velha deste celular
+  // passava por cima do que ela tinha mudado. Quem chama busca primeiro.
   function estadoParaEnviar() {
-    if (!baseSincronizada) return state; // primeira vez: manda tudo
-    const saida = { apagados: state.apagados || [] };
+    return baseSincronizada ? diferenca(state, baseSincronizada) : null;
+  }
+
+  // Os cadastros de `atual` que não estão iguais em `base`, mais os apagados.
+  function diferenca(atual, base) {
+    const saida = { apagados: atual.apagados || [] };
     for (const o of OBJETOS) {
-      if (impressao(state[o] || {}) !== impressao(baseSincronizada[o] || {})) {
-        saida[o] = state[o];
-      }
+      if (impressao(atual[o] || {}) !== impressao(base[o] || {})) saida[o] = atual[o];
     }
     for (const lista of LISTAS) {
-      const antes = new Map((baseSincronizada[lista] || []).map((x) => [x.id, impressao(x)]));
-      const mudados = (state[lista] || []).filter((x) => antes.get(x.id) !== impressao(x));
+      const antes = new Map((base[lista] || []).map((x) => [x.id, impressao(x)]));
+      const mudados = (atual[lista] || []).filter((x) => antes.get(x.id) !== impressao(x));
       if (mudados.length) saida[lista] = mudados;
     }
     return saida;
@@ -1673,9 +1695,12 @@
       erro.aviso = dados && dados.erro;
       // sessão vencida ou cancelada: volta para a tela de entrada
       if (resp.status === 401) sessaoCaiu();
+      // o servidor não grava mais desta versão: procura a nova
+      if (resp.status === 426) atualizacaoObrigatoria();
       throw erro;
     }
     if (dados && dados.token) guardarToken(dados.token);
+    if (dados && dados.canal) conectarTempoReal(dados.canal);
     return dados;
   }
 
@@ -1686,6 +1711,23 @@
     syncTimer = setTimeout(enviarAgora, 1200);
   }
 
+  // Toma a resposta do servidor como a nova referência e, se ela trouxe
+  // novidade, põe na tela. As duas coisas andam sempre juntas: se a base
+  // avançasse e a tela não, o envio seguinte veria como "alteração daqui"
+  // tudo o que o outro celular mudou — e mandaria a cópia velha por cima.
+  function adotarNuvem(r, comAviso) {
+    const nuvem = comoEstado(r.estado || {});
+    if (r.atualizado_em) ultimoAtualizadoEm = r.atualizado_em;
+    guardarBase(nuvem);
+    if (!estadosDiferem(nuvem, state)) return false;
+    state = nuvem;
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
+    preencherConfig();
+    renderTudo();
+    if (comAviso) toast("Atualizado ✨");
+    return true;
+  }
+
   async function enviarAgora() {
     if (!temSessao()) return;
     // um envio de cada vez: dois em voo podem chegar fora de ordem e a
@@ -1694,34 +1736,27 @@
       reenviar = true;
       return;
     }
+    // sem referência do que o servidor tem, não dá para saber o que mudou
+    // aqui: busca primeiro, nunca manda o cadastro inteiro às cegas
+    if (!baseSincronizada) return sincronizarAoAbrir();
     clearTimeout(syncTimer);
     enviando = true;
     envioPendente = false;
     const revisaoEnviada = revisaoLocal;
     try {
       const r = await api({ op: "salvar", ...credencial(), estado: estadoParaEnviar() });
-      // guarda o carimbo da nossa própria escrita para o polling não
-      // reaplicar os mesmos dados como se fossem novidade
-      if (r && r.atualizado_em) ultimoAtualizadoEm = r.atualizado_em;
-      // a base é o que o servidor confirma ter, não o que achamos ter mandado
-      if (r && r.estado) baseSincronizada = copiar(r.estado);
 
       // Se alguém mexeu no app enquanto a resposta vinha, o que está aqui é
       // mais novo do que o que o servidor devolveu. Aplicar a resposta agora
       // desfaria essa alteração — e o envio seguinte gravaria o desfazimento.
-      // Então mantém o que temos e manda de novo.
+      // Então mantém o que temos (base inclusive) e manda de novo.
       const mudouDurante = revisaoLocal !== revisaoEnviada;
       if (mudouDurante) {
         reenviar = true;
       } else if (r && r.estado && !editandoId && !notaEditando) {
         // o servidor devolve tudo somado (o nosso + o que o outro celular
         // cadastrou): aplica só se realmente trouxe novidade
-        if (estadosDiferem(r.estado, state)) {
-          state = comoEstado(r.estado);
-          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
-          preencherConfig();
-          renderTudo();
-        }
+        adotarNuvem(r, false);
       }
       syncPendente = false;
     } catch (e) {
@@ -1750,6 +1785,7 @@
   // no campo de nome logo depois de cadastrar alguém).
   async function puxarSeMudou() {
     if (!temSessao() || enviando || envioPendente || syncPendente) return;
+    if (!baseSincronizada) return sincronizarAoAbrir();
     if (editandoId || notaEditando) return; // não sobrescreve algo sendo editado
     if (document.visibilityState !== "visible") return;
     const ativo = document.activeElement;
@@ -1765,14 +1801,7 @@
       if (revisaoLocal !== revisaoAoBuscar) return;
       if (enviando || envioPendente || syncPendente) return;
       if (editandoId || notaEditando) return;
-      ultimoAtualizadoEm = r.atualizado_em;
-      const nuvem = r.estado || {};
-      baseSincronizada = copiar(nuvem);
-      state = comoEstado(nuvem);
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
-      preencherConfig();
-      renderTudo();
-      toast("Atualizado ✨");
+      adotarNuvem(r, true);
     } catch {}
   }
 
@@ -1786,12 +1815,111 @@
     puxarSeMudou();
   }, 7000);
 
+  /* ---------- tempo real ---------- */
+
+  // O servidor avisa por um canal do Realtime sempre que alguém do casal
+  // grava algo (ou um convidado confirma presença). O aviso não traz dado
+  // nenhum — só "mudou" — e o app busca na hora pela API, com a sessão.
+  // A verificação a cada 7 s continua como rede de segurança.
+  //
+  // Conversa direto com o protocolo do Realtime (Phoenix): entrar no canal,
+  // bater o coração a cada 25 s, ouvir as mensagens. Sem biblioteca.
+  //
+  // A chave abaixo é a chave pública do projeto: serve só para abrir a
+  // conexão. As tabelas têm RLS sem policies, então ela não lê nada.
+  const CHAVE_PUBLICA = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJneGttbnRwZGJ2dnFjd2tzcndsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODczMTQ1MDQsImV4cCI6MjEwMjg5MDUwNH0.a_4i1ZTKiEKQoBpLsSOSyd5rBCLlixS6YLKlNHxiW_w";
+  const TEMPO_REAL_URL = "wss://rgxkmntpdbvvqcwksrwl.supabase.co/realtime/v1/websocket?apikey=" + CHAVE_PUBLICA + "&vsn=1.0.0";
+  let canalAtual = "";
+  let conexao = null;
+  let aoVivo = false;         // entrou no canal e está ouvindo
+  let batimento = null;
+  let refMensagem = 0;
+  let tentativasConexao = 0;
+  let religar = null;
+
+  function mandarAoCanal(topic, event, payload) {
+    if (!conexao || conexao.readyState !== 1) return;
+    refMensagem++;
+    try { conexao.send(JSON.stringify({ topic, event, payload, ref: String(refMensagem) })); } catch {}
+  }
+
+  function conectarTempoReal(canal) {
+    if (!canal || !temSessao() || typeof WebSocket === "undefined") return;
+    // já conectado (ou conectando) neste canal: nada a fazer
+    if (canal === canalAtual && conexao && conexao.readyState <= 1) return;
+    desconectarTempoReal();
+    canalAtual = canal;
+    let ws;
+    try { ws = new WebSocket(TEMPO_REAL_URL); } catch { return; }
+    conexao = ws;
+    ws.onopen = () => {
+      if (conexao !== ws) return;
+      mandarAoCanal("realtime:" + canal, "phx_join", {
+        config: { broadcast: { self: false, ack: false }, presence: { key: "" }, postgres_changes: [], private: false },
+      });
+      batimento = setInterval(() => mandarAoCanal("phoenix", "heartbeat", {}), 25000);
+    };
+    ws.onmessage = (e) => {
+      if (conexao !== ws) return;
+      let m;
+      try { m = JSON.parse(e.data); } catch { return; }
+      if (m.event === "phx_reply" && m.topic === "realtime:" + canal) {
+        const ok = m.payload && m.payload.status === "ok";
+        if (ok !== aoVivo) { aoVivo = ok; renderSync(); }
+        if (ok) tentativasConexao = 0;
+        return;
+      }
+      if (m.event === "broadcast" && m.payload && m.payload.event === "mudou") {
+        // alguém gravou: busca agora em vez de esperar o próximo ciclo
+        puxarSeMudou();
+      }
+    };
+    ws.onclose = () => {
+      if (conexao !== ws) return;
+      clearInterval(batimento);
+      conexao = null;
+      if (aoVivo) { aoVivo = false; renderSync(); }
+      // tenta de novo, esperando cada vez mais (1 s, 2 s, 4 s… até 30 s)
+      const espera = Math.min(30000, 1000 * 2 ** Math.min(tentativasConexao++, 5));
+      clearTimeout(religar);
+      religar = setTimeout(() => conectarTempoReal(canalAtual), espera);
+    };
+    ws.onerror = () => {};
+  }
+
+  function desconectarTempoReal() {
+    clearTimeout(religar);
+    clearInterval(batimento);
+    if (aoVivo) { aoVivo = false; renderSync(); }
+    if (conexao) {
+      const ws = conexao;
+      conexao = null;
+      try { ws.close(); } catch {}
+    }
+  }
+
+  // ao voltar para o app (ou a rede voltar), religa se a conexão caiu
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && canalAtual && !conexao) {
+      tentativasConexao = 0;
+      conectarTempoReal(canalAtual);
+    }
+  });
+  window.addEventListener("online", () => {
+    if (canalAtual && !conexao) { tentativasConexao = 0; conectarTempoReal(canalAtual); }
+  });
+
   function guardarCasal(codigo, bilhete) {
     casal = codigo;
     try {
       if (codigo) localStorage.setItem(CASAL_KEY, codigo);
       else localStorage.removeItem(CASAL_KEY);
     } catch {}
+    if (!codigo) {
+      guardarBase(null);
+      canalAtual = "";
+      desconectarTempoReal();
+    }
     if (bilhete !== undefined) {
       token = bilhete || "";
       try {
@@ -1827,7 +1955,7 @@
       status.textContent = "aguardando conexão";
       status.className = "sync-status is-erro";
     } else {
-      status.textContent = "sincronizado ✓";
+      status.textContent = aoVivo ? "sincronizado · ao vivo ✓" : "sincronizado ✓";
       status.className = "sync-status is-ok";
     }
   }
@@ -1925,20 +2053,14 @@
     guardarCasal(codigo, bilhete);
     try {
       const r = await api({ op: "estado", ...credencial() });
-      ultimoAtualizadoEm = r.atualizado_em || ultimoAtualizadoEm;
       const nuvem = r.estado || {};
-      const nuvemTemDados =
-        (nuvem.convidados || []).length ||
-        (nuvem.itens || []).length ||
-        (nuvem.padrinhos || []).length ||
-        (nuvem.fornecedores || []).length ||
-        (nuvem.config && (nuvem.config.noiva || nuvem.config.noivo || nuvem.config.data));
-      if (nuvemTemDados) {
-        state = comoEstado(nuvem);
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
-        preencherConfig();
-        renderTudo();
+      if (nuvemTemDados(nuvem)) {
+        adotarNuvem(r, false);
       } else {
+        // conta ainda vazia: a referência é o vazio, e a diferença — tudo o
+        // que já existe neste aparelho — sobe no envio
+        if (r.atualizado_em) ultimoAtualizadoEm = r.atualizado_em;
+        guardarBase(comoEstado(nuvem));
         enviarAgora();
       }
       syncPendente = false;
@@ -2087,38 +2209,89 @@
     }
   });
 
-  // Ao abrir o app, manda o que está guardado no aparelho e recebe de volta
-  // tudo somado — assim nada que ficou só num celular se perde.
-  async function sincronizarAoAbrir() {
-    if (!temSessao()) return;
-    const temDadosLocais = LISTAS.some((lista) => (state[lista] || []).length > 0);
-    if (temDadosLocais) {
-      await enviarAgora();
-    } else {
-      await baixarDaNuvem();
+  const nuvemTemDados = (nuvem) =>
+    LISTAS.some((lista) => (nuvem[lista] || []).length > 0) ||
+    Boolean(nuvem.config && (nuvem.config.noiva || nuvem.config.noivo || nuvem.config.data));
+
+  // O que este aparelho mudou desde a última sincronização, para pôr por
+  // cima do que o servidor tem ao abrir o app.
+  //
+  // Sem base guardada (app recém-instalado, ou a primeira abertura depois
+  // desta versão) não dá para distinguir "eu mudei" de "o outro celular
+  // mudou e a minha cópia ficou velha". Então o servidor manda nos cadastros
+  // que ele conhece; daqui sobem os que ele não tem e o que foi mexido
+  // enquanto a busca corria. Se ele não tem nada, este aparelho é a origem
+  // e sobe tudo.
+  function mudancasLocais(nuvem, antesDaBusca) {
+    if (baseSincronizada) return diferenca(state, baseSincronizada);
+    if (!nuvemTemDados(nuvem)) return state;
+    const saida = diferenca(state, antesDaBusca);
+    for (const lista of LISTAS) {
+      const conhecidos = new Set((nuvem[lista] || []).map((x) => x.id));
+      const jaInclusos = new Set((saida[lista] || []).map((x) => x.id));
+      const novos = (state[lista] || []).filter((x) => !conhecidos.has(x.id) && !jaInclusos.has(x.id));
+      if (novos.length) saida[lista] = [...(saida[lista] || []), ...novos];
     }
+    return saida;
   }
 
-  async function baixarDaNuvem() {
+  // Ao abrir o app: busca o que o servidor tem e põe por cima só o que mudou
+  // aqui; a diferença sobe em seguida.
+  //
+  // Antes o app mandava o cadastro inteiro guardado no aparelho, "para nada
+  // se perder". Como o servidor grava linha por linha, era o contrário: a
+  // cópia velha deste celular apagava tudo o que o outro tinha alterado
+  // desde a última vez que este foi aberto.
+  async function sincronizarAoAbrir() {
     if (!temSessao()) return;
+    if (enviando) {
+      reenviar = true;
+      return;
+    }
+    clearTimeout(syncTimer);
+    enviando = true;
+    envioPendente = false;
+    const antesDaBusca = copiar(state);
     try {
       const r = await api({ op: "estado", ...credencial() });
-      ultimoAtualizadoEm = r.atualizado_em || ultimoAtualizadoEm;
-      state = comoEstado(r.estado);
+      const nuvem = comoEstado(r.estado || {});
+      const mudancas = mudancasLocais(nuvem, antesDaBusca);
+      const novo = comoEstado(nuvem);
+      for (const o of OBJETOS) if (mudancas[o]) novo[o] = mudancas[o];
+      // o que foi apagado aqui e ainda não subiu não volta para a tela
+      const apagadosAqui = new Set((state.apagados || []).map((a) => a.id));
+      for (const lista of LISTAS) {
+        const porId = new Map(
+          (novo[lista] || []).filter((x) => !apagadosAqui.has(x.id)).map((x) => [x.id, x]),
+        );
+        for (const x of mudancas[lista] || []) porId.set(x.id, x);
+        novo[lista] = [...porId.values()];
+      }
+      novo.apagados = state.apagados || [];
+      if (r.atualizado_em) ultimoAtualizadoEm = r.atualizado_em;
+      guardarBase(nuvem);
+      state = novo;
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
-      syncPendente = false;
       preencherConfig();
       renderTudo();
+      syncPendente = false;
+      if (estadosDiferem(state, baseSincronizada)) reenviar = true;
     } catch (e) {
       if (e.status === 404) {
         // registro apagado no servidor: mantém os dados locais e desconecta
-        guardarCasal("");
+        guardarCasal("", "");
         toast("A conta foi desconectada; entre novamente.");
       } else {
         syncPendente = true;
       }
+    } finally {
+      enviando = false;
     }
     renderSync();
+    if (reenviar) {
+      reenviar = false;
+      agendarEnvio();
+    }
   }
 
   window.addEventListener("online", enviarAgora);
@@ -2127,12 +2300,13 @@
     if (document.visibilityState === "hidden") {
       // envia imediatamente o que estiver pendente ao sair do app
       // inclui o envio em voo: fechar o app pode cancelar o fetch no meio
-      if (enviando || envioPendente || syncPendente) {
+      const envio = (enviando || envioPendente || syncPendente) ? estadoParaEnviar() : null;
+      if (envio) {
         clearTimeout(syncTimer);
         try {
           navigator.sendBeacon(
             API_URL,
-            new Blob([JSON.stringify({ op: "salvar", ...credencial(), estado: estadoParaEnviar() })], { type: "text/plain;charset=UTF-8" })
+            new Blob([JSON.stringify({ op: "salvar", ...credencial(), estado: envio })], { type: "text/plain;charset=UTF-8" })
           );
         } catch {}
       }
@@ -2288,6 +2462,17 @@
   $("#app-versao").textContent = "v" + VERSAO_APP;
 
   let registroSW = null;
+
+  // O servidor respondeu que esta versão não grava mais (426): avisa e vai
+  // atrás da nova. O que foi alterado fica guardado aqui e sobe depois.
+  let avisouAtualizacao = false;
+  function atualizacaoObrigatoria() {
+    if (!avisouAtualizacao) {
+      avisouAtualizacao = true;
+      toast("Há uma versão nova do app; atualizando… 🔄");
+    }
+    if (registroSW) registroSW.update().catch(() => {});
+  }
 
   if ("serviceWorker" in navigator) {
     // se já havia uma versão instalada, uma troca de controle significa

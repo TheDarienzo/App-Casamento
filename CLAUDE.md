@@ -60,6 +60,29 @@ apagado_em    timestamptz                          -- soft delete
   anon, authenticated, public` + `grant execute … to service_role`. Sem
   isso qualquer um com a chave pública do projeto chama pelo `/rest/v1/rpc/`.
 
+## Sincronização entre celulares — regras que não podem quebrar
+
+Cada aparelho guarda, além do estado, a **base**: a última resposta do
+servidor (`nosso-casamento-base`). O envio é sempre a **diferença** entre o
+estado e a base — só os cadastros que este aparelho mudou.
+
+- **Nunca mandar o estado inteiro.** Sem base, busca primeiro
+  (`sincronizarAoAbrir`) e põe por cima só o que mudou aqui. Foi um envio
+  "de tudo" ao abrir o app que apagou alterações da Rayane: o servidor grava
+  linha por linha e a cópia velha de um celular passou por cima.
+- **Base e tela andam juntas.** Só `adotarNuvem()` atualiza a base, e ela
+  troca o estado no mesmo ato. Se a base avançar e a tela não, o envio
+  seguinte leva como "alteração daqui" tudo o que o outro celular mudou.
+- Toda chamada leva `versao`. O servidor recusa gravação (426) de versão
+  abaixo de `configuracao.versao_minima_gravacao`; leitura continua. Ao
+  mudar o formato do envio, subir esse mínimo junto com a versão.
+- Tempo real: depois de cada gravação (e de cada confirmação de convidado)
+  a Edge Function manda um aviso vazio pelo Realtime, canal
+  `casal-<hash>`; o app busca pela API ao receber. O ciclo de 7 s continua
+  como rede de segurança. A CSP precisa liberar `wss://…supabase.co`.
+- Teste de referência: `teste-abertura.mjs` (cópia velha ao abrir, resposta
+  durante edição, edição sem conexão) — os três cenários têm de passar.
+
 ## Aplicativo
 
 - Português do Brasil em tudo: interface, nomes de variáveis e comentários.
