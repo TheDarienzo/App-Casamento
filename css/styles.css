@@ -1294,11 +1294,24 @@ html[data-transicao="volta"]::view-transition-new(tela) {
     var(--vt-move) cubic-bezier(0.22, 1, 0.36, 1) var(--vt-espera) both vt-desliza;
 }
 
+/* A foto do cabeçalho tem nome próprio (para virar a foto grande), então
+   fora dessa transição ela precisa ficar parada — senão, a cada troca de
+   tela, o navegador a cruzava com ela mesma e ela sumia e voltava. */
+::view-transition-group(foto-casal) { animation: none; z-index: 101; }
+::view-transition-old(foto-casal) { display: none; }
+::view-transition-new(foto-casal) { animation: none; }
+
 /* a foto pequena cresce até virar a grande; o fundo escuro esmaece */
+html[data-transicao="foto"]::view-transition-old(foto-casal) { display: block; }
 html[data-transicao="foto"]::view-transition-group(foto-casal) {
   animation-duration: var(--vt-move);
   animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
   z-index: 110;
+}
+html[data-transicao="foto"]::view-transition-old(foto-casal),
+html[data-transicao="foto"]::view-transition-new(foto-casal) {
+  animation-duration: var(--vt-move);
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 }
 html[data-transicao="foto"]::view-transition-group(fundo-foto) { z-index: 105; }
 html[data-transicao="foto"]::view-transition-old(fundo-foto) {
