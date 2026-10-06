@@ -94,6 +94,13 @@ estado e a base — só os cadastros que este aparelho mudou.
   `background-attachment: fixed` em tempo de execução. Animação só com
   `transform` e `opacity`. Já custou lentidão uma vez: o navegador
   recalculava os filtros a cada redesenho.
+- Troca de tela e foto do casal usam a View Transitions API nativa
+  (`comTransicao` em `js/app.js`, CSS em "Transições de tela"): aba para
+  aba só esmaece (lateral); engrenagem e atalhos do início deslizam
+  (avança/volta). A tela nova começa a entrar antes de a antiga sumir —
+  nunca um instante em branco — e só a tela ativa anima; cabeçalho e barra
+  ficam parados. Sem a API, a troca é seca. `testes/teste-transicoes.mjs`
+  fotografa o meio da animação.
 - Visual: marfim, verde-oliva, dourado e rosa-chá, cantos arredondados e
   sombras suaves — Fraunces nos títulos e números, Karla no texto. Nada de
   textura de aquarela nem fonte manuscrita (testado e rejeitado).

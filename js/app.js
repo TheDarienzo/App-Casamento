@@ -6,7 +6,7 @@
 (() => {
   "use strict";
 
-  const VERSAO_APP = "30";
+  const VERSAO_APP = "31";
   const STORAGE_KEY = "nosso-casamento-v1";
   const CASAL_KEY = "nosso-casamento-casal";
   // bilhete de sessão assinado pelo servidor (substitui guardar o código do casal)
@@ -330,16 +330,57 @@
 
   /* ---------- navegação ---------- */
 
-  function irPara(view) {
-    $$(".view").forEach((v) => v.classList.remove("is-active"));
-    const alvo = $("#view-" + view);
-    if (alvo) alvo.classList.add("is-active");
-    $$(".nav-item").forEach((b) => b.classList.toggle("is-active", b.dataset.view === view));
-    window.scrollTo({ top: 0, behavior: "instant" });
+  /* ---------- transições de tela (View Transitions API) ---------- */
+
+  // Trocar de tela e abrir a foto usam a View Transitions API do navegador:
+  // ele tira um retrato do antes e do depois e anima entre os dois no
+  // compositor, sem recalcular layout no meio. Onde a API não existe, ou
+  // quem pediu menos movimento no sistema, a troca é seca e vale a animação
+  // de entrada do CSS, como sempre foi.
+  //
+  // Tipos: "lateral" (uma aba para outra: só esmaece, sem sugerir
+  // profundidade), "avanca"/"volta" (engrenagem e atalhos do início descem
+  // um nível e voltam, deslizando) e "foto" (a foto pequena vira a grande).
+  const movimentoReduzido = matchMedia("(prefers-reduced-motion: reduce)");
+  const temTransicao = () =>
+    typeof document.startViewTransition === "function" && !movimentoReduzido.matches;
+  if (typeof document.startViewTransition === "function") document.documentElement.classList.add("vt");
+  let transicaoEmCurso = null;
+
+  function comTransicao(tipo, mudar) {
+    if (!tipo || tipo === "nenhum" || !temTransicao()) {
+      mudar();
+      return;
+    }
+    // toque rápido em duas abas: a segunda troca ganha, sem esperar a primeira
+    if (transicaoEmCurso) transicaoEmCurso.skipTransition();
+    document.documentElement.dataset.transicao = tipo;
+    const transicao = document.startViewTransition(mudar);
+    transicaoEmCurso = transicao;
+    transicao.finished.finally(() => {
+      if (transicaoEmCurso !== transicao) return;
+      transicaoEmCurso = null;
+      delete document.documentElement.dataset.transicao;
+    });
+  }
+
+  function irPara(view, tipo) {
+    const ativa = $(".view.is-active");
+    const de = ativa ? ativa.id.replace("view-", "") : "";
+    if (de === view) return;
+    if (!tipo) tipo = view === "config" ? "avanca" : de === "config" ? "volta" : "lateral";
+    comTransicao(tipo, () => {
+      $$(".view").forEach((v) => v.classList.remove("is-active"));
+      const alvo = $("#view-" + view);
+      if (alvo) alvo.classList.add("is-active");
+      $$(".nav-item").forEach((b) => b.classList.toggle("is-active", b.dataset.view === view));
+      window.scrollTo({ top: 0, behavior: "instant" });
+    });
   }
 
   $$(".nav-item").forEach((btn) => btn.addEventListener("click", () => irPara(btn.dataset.view)));
-  $$("[data-goto]").forEach((btn) => btn.addEventListener("click", () => irPara(btn.dataset.goto)));
+  // atalhos do início levam para dentro de uma lista: desce um nível
+  $$("[data-goto]").forEach((btn) => btn.addEventListener("click", () => irPara(btn.dataset.goto, "avanca")));
   $("#btn-config").addEventListener("click", () => irPara("config"));
 
   /* ---------- contagem regressiva ---------- */
@@ -2405,17 +2446,25 @@
 
   const fotoGrande = $("#foto-grande");
 
+  // A foto pequena do cabeçalho "vira" a grande: as duas têm o mesmo nome de
+  // transição, e o navegador anima uma na outra.
   function abrirFoto() {
     const foto = state.config.foto;
     if (!foto) return;
     $("#foto-grande-img").src = foto;
-    fotoGrande.hidden = false;
+    comTransicao("foto", () => {
+      document.body.classList.add("foto-aberta");
+      fotoGrande.hidden = false;
+    });
     $("#foto-grande-fechar").focus();
   }
 
   function fecharFoto() {
-    fotoGrande.hidden = true;
-    $("#foto-grande-img").src = "";
+    comTransicao("foto", () => {
+      fotoGrande.hidden = true;
+      document.body.classList.remove("foto-aberta");
+      $("#foto-grande-img").src = "";
+    });
     $("#monogram").focus();
   }
 
@@ -2455,7 +2504,7 @@
 
   // primeira visita: leva direto para a configuração
   const primeiraVez = !state.config.data && state.convidados.length === 0 && state.itens.length === 0;
-  if (primeiraVez) irPara("config");
+  if (primeiraVez) irPara("config", "nenhum");
 
   /* ---------- service worker e atualização automática ---------- */
 

@@ -1206,6 +1206,114 @@ input, select { font-family: inherit; font-size: 1rem; color: var(--ink); }
   .abertura { display: none; }
 }
 
+/* ---------- Transições de tela (View Transitions API) ----------
+   O navegador tira um retrato do antes e do depois e anima entre os dois.
+   Só a tela ativa (nome "tela") e a foto do casal animam; cabeçalho, barra
+   de navegação e aviso ficam parados por cima, e o fundo (root) não
+   esmaece — assim nada pisca e o toque continua respondendo. */
+
+:root {
+  --vt-sai: 120ms;      /* a antiga some depressa */
+  --vt-espera: 60ms;    /* a nova começa antes de a antiga terminar: nunca fica em branco */
+  --vt-entra: 200ms;
+  --vt-move: 280ms;
+}
+
+/* com a API presente, a entrada antiga do CSS sai de cena */
+.vt .view { animation: none; }
+.vt .foto-grande img { animation: none; }
+
+.view.is-active { view-transition-name: tela; }
+.app-header { view-transition-name: cabecalho; }
+.bottom-nav { view-transition-name: navegacao; }
+.toast { view-transition-name: aviso; }
+.foto-grande { view-transition-name: fundo-foto; }
+.foto-grande img { view-transition-name: foto-casal; }
+.monogram { view-transition-name: foto-casal; }
+body.foto-aberta .monogram { view-transition-name: none; }
+
+::view-transition { pointer-events: none; }
+::view-transition-old(root) { display: none; }
+::view-transition-new(root) { animation: none; }
+
+::view-transition-group(cabecalho),
+::view-transition-group(navegacao),
+::view-transition-group(aviso) { animation: none; z-index: 100; }
+::view-transition-old(cabecalho),
+::view-transition-old(navegacao),
+::view-transition-old(aviso) { display: none; }
+::view-transition-new(cabecalho),
+::view-transition-new(navegacao),
+::view-transition-new(aviso) { animation: none; }
+
+@keyframes vt-esmaece { from { opacity: 0; } to { opacity: 1; } }
+@keyframes vt-desliza { from { translate: var(--vt-desloc); } to { translate: 0; } }
+@keyframes vt-sobe { from { transform: translateY(10px); } to { transform: none; } }
+
+/* A caixa da tela não anima tamanho (as telas têm alturas bem diferentes e
+   o retrato ficaria esticado); cada retrato fica no tamanho natural. As
+   duas telas se cruzam: a nova já entra enquanto a antiga sai, para nunca
+   haver um instante em branco. */
+::view-transition-group(tela) { animation: none; }
+::view-transition-old(tela),
+::view-transition-new(tela) { height: auto; }
+
+/* aba para aba: esmaece e sobe de leve — sem sugerir profundidade */
+html[data-transicao="lateral"]::view-transition-old(tela) {
+  animation: var(--vt-sai) ease-in both vt-esmaece reverse;
+}
+html[data-transicao="lateral"]::view-transition-new(tela) {
+  animation:
+    var(--vt-entra) ease-out var(--vt-espera) both vt-esmaece,
+    var(--vt-move) cubic-bezier(0.22, 1, 0.36, 1) var(--vt-espera) both vt-sobe;
+}
+
+/* descer um nível: a nova entra pela direita; voltar: pela esquerda */
+html[data-transicao="avanca"]::view-transition-old(tela) {
+  --vt-desloc: -40px;
+  animation:
+    var(--vt-sai) ease-in both vt-esmaece reverse,
+    var(--vt-sai) ease-in both vt-desliza reverse;
+}
+html[data-transicao="avanca"]::view-transition-new(tela) {
+  --vt-desloc: 40px;
+  animation:
+    var(--vt-entra) ease-out var(--vt-espera) both vt-esmaece,
+    var(--vt-move) cubic-bezier(0.22, 1, 0.36, 1) var(--vt-espera) both vt-desliza;
+}
+html[data-transicao="volta"]::view-transition-old(tela) {
+  --vt-desloc: 40px;
+  animation:
+    var(--vt-sai) ease-in both vt-esmaece reverse,
+    var(--vt-sai) ease-in both vt-desliza reverse;
+}
+html[data-transicao="volta"]::view-transition-new(tela) {
+  --vt-desloc: -40px;
+  animation:
+    var(--vt-entra) ease-out var(--vt-espera) both vt-esmaece,
+    var(--vt-move) cubic-bezier(0.22, 1, 0.36, 1) var(--vt-espera) both vt-desliza;
+}
+
+/* a foto pequena cresce até virar a grande; o fundo escuro esmaece */
+html[data-transicao="foto"]::view-transition-group(foto-casal) {
+  animation-duration: var(--vt-move);
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  z-index: 110;
+}
+html[data-transicao="foto"]::view-transition-group(fundo-foto) { z-index: 105; }
+html[data-transicao="foto"]::view-transition-old(fundo-foto) {
+  animation: var(--vt-sai) ease-in both vt-esmaece reverse;
+}
+html[data-transicao="foto"]::view-transition-new(fundo-foto) {
+  animation: var(--vt-entra) ease-out both vt-esmaece;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) { animation: none !important; }
+}
+
 /* ---------- Página do convite (configurações) ---------- */
 
 .campo-label {
